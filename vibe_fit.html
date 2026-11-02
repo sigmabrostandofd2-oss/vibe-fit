@@ -1,0 +1,2764 @@
+<!DOCTYPE html>
+<html lang="ru" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>VIBE.FIT — КБЖУ & План Нагрузок</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- HTML5 QRCode & Barcode Scanner Library -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        bgMain: '#08080c',
+                        bgCard: '#12121a',
+                        bgElevated: '#1a1a26',
+                        neonLime: '#a3e635',
+                        neonCyan: '#06b6d4',
+                        neonPurple: '#a855f7',
+                        neonOrange: '#f97316',
+                        neonPink: '#ec4899'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #08080c;
+            color: #f3f4f6;
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            overflow-x: hidden;
+        }
+        .glass-card {
+            background: rgba(18, 18, 26, 0.85);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+        }
+        .glass-nav {
+            background: rgba(12, 12, 18, 0.92);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .neon-glow-lime {
+            box-shadow: 0 0 20px rgba(163, 230, 53, 0.18);
+        }
+        .neon-glow-cyan {
+            box-shadow: 0 0 20px rgba(6, 182, 212, 0.18);
+        }
+        .neon-glow-purple {
+            box-shadow: 0 0 20px rgba(168, 85, 247, 0.2);
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #08080c;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #27273a;
+            border-radius: 3px;
+        }
+        .ring-progress {
+            transition: stroke-dashoffset 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+        @keyframes pulse-fast {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.04); }
+        }
+        .animate-pop {
+            animation: pulse-fast 0.25s ease-in-out;
+        }
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-24 md:pb-10 selection:bg-neonLime selection:text-black">
+
+    <!-- Top Gamified RPG Header -->
+    <header class="sticky top-0 z-30 glass-nav border-b border-white/5 px-4 py-3">
+        <div class="max-w-5xl mx-auto flex flex-wrap items-center justify-between gap-3">
+            <!-- Brand & Level -->
+            <div class="flex items-center gap-3">
+                <div class="relative flex items-center justify-center w-11 h-11 rounded-2xl bg-gradient-to-br from-neonLime/20 via-neonCyan/20 to-neonPurple/30 border border-neonLime/40 neon-glow-lime">
+                    <i class="ph-fill ph-lightning text-neonLime text-2xl"></i>
+                    <span id="userLevelBadge" class="absolute -bottom-1 -right-1 bg-neonPurple text-white font-mono text-[10px] font-bold px-1.5 py-0.5 rounded-md border border-black">
+                        LVL 1
+                    </span>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="font-black tracking-tight text-lg bg-clip-text text-transparent bg-gradient-to-r from-white via-gray-100 to-gray-400">
+                            VIBE<span class="text-neonLime">.FIT</span>
+                        </h1>
+                        <span id="goalBadgeHeader" class="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-neonLime/10 text-neonLime border border-neonLime/30">
+                            Рекомпозиция
+                        </span>
+                    </div>
+                    <!-- XP Bar -->
+                    <div class="flex items-center gap-2 mt-1">
+                        <div class="w-28 sm:w-36 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                            <div id="xpProgressBar" class="h-full bg-gradient-to-r from-neonPurple to-neonCyan transition-all duration-500" style="width: 35%"></div>
+                        </div>
+                        <span id="xpText" class="font-mono text-[11px] text-gray-400">35 / 100 XP</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Actions: Streak & Reset Day -->
+            <div class="flex items-center gap-2.5">
+                <button onclick="openScannerModal()" class="flex items-center gap-1.5 bg-neonLime/15 hover:bg-neonLime/25 text-neonLime px-3 py-1.5 rounded-xl border border-neonLime/40 text-xs font-bold transition active:scale-95 shadow-sm">
+                    <i class="ph-bold ph-qr-code text-base"></i>
+                    <span class="hidden sm:inline">Сканер QR / Штрих</span>
+                </button>
+                <div class="flex items-center gap-1.5 bg-bgElevated px-3 py-1.5 rounded-xl border border-white/5" title="Дней в режиме подряд">
+                    <i class="ph-fill ph-fire text-neonOrange text-lg animate-pulse"></i>
+                    <span id="streakCount" class="font-mono font-bold text-sm text-white">1</span>
+                    <span class="text-xs text-gray-400 hidden sm:inline">дн.</span>
+                </div>
+                <button onclick="openResetDayModal()" class="flex items-center gap-1.5 bg-bgElevated hover:bg-white/10 text-gray-300 px-3 py-1.5 rounded-xl border border-white/10 text-xs font-medium transition active:scale-95">
+                    <i class="ph ph-arrows-clockwise text-sm text-neonCyan"></i>
+                    <span class="hidden sm:inline">Новый день</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="max-w-5xl mx-auto px-4 pt-5">
+
+        <!-- Desktop Navigation Tabs (Hidden on Mobile, shown on md+) -->
+        <div class="hidden md:flex items-center gap-2 mb-6 bg-bgCard p-1.5 rounded-2xl border border-white/5 w-fit">
+            <button onclick="switchTab('dashboard')" id="deskTab-dashboard" class="px-5 py-2.5 rounded-xl text-sm font-semibold transition flex items-center gap-2 bg-neonLime text-black">
+                <i class="ph-fill ph-chart-pie-slice text-lg"></i> Дашборд
+            </button>
+            <button onclick="switchTab('nutrition')" id="deskTab-nutrition" class="px-5 py-2.5 rounded-xl text-sm font-semibold transition flex items-center gap-2 text-gray-400 hover:text-white">
+                <i class="ph-fill ph-fork-knife text-lg"></i> База Страв & КБЖУ
+            </button>
+            <button onclick="switchTab('workouts')" id="deskTab-workouts" class="px-5 py-2.5 rounded-xl text-sm font-semibold transition flex items-center gap-2 text-gray-400 hover:text-white">
+                <i class="ph-fill ph-barbell text-lg"></i> План Нагрузок
+            </button>
+            <button onclick="switchTab('settings')" id="deskTab-settings" class="px-5 py-2.5 rounded-xl text-sm font-semibold transition flex items-center gap-2 text-gray-400 hover:text-white">
+                <i class="ph-fill ph-sliders-horizontal text-lg"></i> Калькулятор & Цели
+            </button>
+            <button onclick="openScannerModal()" class="px-4 py-2.5 rounded-xl text-sm font-bold transition flex items-center gap-2 bg-neonCyan/15 text-neonCyan border border-neonCyan/30 hover:bg-neonCyan/25 ml-2">
+                <i class="ph-bold ph-barcode text-lg"></i> Сканер Еды
+            </button>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- TAB 1: DASHBOARD (СЕГОДНЯ)                 -->
+        <!-- ========================================== -->
+        <section id="tab-dashboard" class="space-y-5">
+            
+            <!-- Top Grid: Main КБЖУ Ring + Macros & Water -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                
+                <!-- КБЖУ Hero Card (7 cols on lg) -->
+                <div class="lg:col-span-7 glass-card rounded-3xl p-5 sm:p-6 relative overflow-hidden">
+                    <div class="absolute -top-24 -right-24 w-52 h-52 bg-neonLime/10 rounded-full blur-3xl pointer-events-none"></div>
+                    
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h2 class="text-base font-bold text-white flex items-center gap-2">
+                                <i class="ph-fill ph-flame text-neonLime"></i> Баланс КБЖУ на сегодня
+                            </h2>
+                            <p id="currentDateDisplay" class="text-xs text-gray-400 mt-0.5">Понедельник, План активен</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="openScannerModal()" class="text-xs font-bold px-2.5 py-1.5 rounded-xl bg-neonCyan/15 text-neonCyan border border-neonCyan/30 hover:bg-neonCyan/25 flex items-center gap-1">
+                                <i class="ph-bold ph-qr-code"></i> Сканер
+                            </button>
+                            <button onclick="switchTab('nutrition')" class="text-xs font-semibold text-neonLime hover:underline flex items-center gap-1">
+                                + База страв <i class="ph ph-caret-right"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-12 gap-6 items-center">
+                        <!-- Circular Calorie Ring -->
+                        <div class="sm:col-span-5 flex flex-col items-center justify-center relative">
+                            <div class="relative w-44 h-44 flex items-center justify-center">
+                                <svg class="w-full h-full" viewBox="0 0 160 160">
+                                    <circle cx="80" cy="80" r="68" stroke="rgba(255,255,255,0.07)" stroke-width="12" fill="none"></circle>
+                                    <circle id="calorieRing" class="ring-progress" cx="80" cy="80" r="68" stroke="#a3e635" stroke-width="12" stroke-linecap="round" fill="none" stroke-dasharray="427.25" stroke-dashoffset="427.25"></circle>
+                                </svg>
+                                <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
+                                    <span id="calRemainingLabel" class="text-[11px] uppercase tracking-wider text-gray-400 font-medium">Осталось</span>
+                                    <span id="calRemainingVal" class="font-mono text-3xl font-extrabold text-white tracking-tight mt-0.5">2200</span>
+                                    <span class="text-[11px] text-neonLime font-mono mt-0.5">ккал</span>
+                                </div>
+                            </div>
+
+                            <!-- Mini Consumed / Burned / Target Row -->
+                            <div class="grid grid-cols-3 gap-2 w-full mt-3 pt-3 border-t border-white/5 text-center">
+                                <div>
+                                    <span class="text-[10px] text-gray-400 block">Съедено</span>
+                                    <span id="calEatenVal" class="font-mono font-bold text-sm text-white">0</span>
+                                </div>
+                                <div class="border-x border-white/5">
+                                    <span class="text-[10px] text-gray-400 block">Сожжено</span>
+                                    <span id="calBurnedVal" class="font-mono font-bold text-sm text-neonCyan">0</span>
+                                </div>
+                                <div>
+                                    <span class="text-[10px] text-gray-400 block">Норма</span>
+                                    <span id="calTargetVal" class="font-mono font-bold text-sm text-neonLime">2200</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Macros Progress Bars -->
+                        <div class="sm:col-span-7 space-y-4">
+                            <!-- Proteins (Белки) -->
+                            <div class="bg-bgElevated/70 p-3.5 rounded-2xl border border-white/5">
+                                <div class="flex justify-between items-center text-xs mb-1.5">
+                                    <span class="font-bold text-white flex items-center gap-1.5">
+                                        <span class="w-2.5 h-2.5 rounded-full bg-neonCyan inline-block"></span> Белки (Б)
+                                    </span>
+                                    <div class="font-mono">
+                                        <span id="protEaten" class="font-bold text-white">0</span>
+                                        <span class="text-gray-400"> / <span id="protTarget">160</span> г</span>
+                                        <span id="protLeft" class="ml-1.5 text-[11px] text-neonCyan">(ост. 160г)</span>
+                                    </div>
+                                </div>
+                                <div class="w-full h-2.5 bg-black/50 rounded-full overflow-hidden">
+                                    <div id="protBar" class="h-full bg-neonCyan rounded-full transition-all duration-500" style="width: 0%"></div>
+                                </div>
+                            </div>
+
+                            <!-- Fats (Жиры) -->
+                            <div class="bg-bgElevated/70 p-3.5 rounded-2xl border border-white/5">
+                                <div class="flex justify-between items-center text-xs mb-1.5">
+                                    <span class="font-bold text-white flex items-center gap-1.5">
+                                        <span class="w-2.5 h-2.5 rounded-full bg-neonOrange inline-block"></span> Жиры (Ж)
+                                    </span>
+                                    <div class="font-mono">
+                                        <span id="fatEaten" class="font-bold text-white">0</span>
+                                        <span class="text-gray-400"> / <span id="fatTarget">70</span> г</span>
+                                        <span id="fatLeft" class="ml-1.5 text-[11px] text-neonOrange">(ост. 70г)</span>
+                                    </div>
+                                </div>
+                                <div class="w-full h-2.5 bg-black/50 rounded-full overflow-hidden">
+                                    <div id="fatBar" class="h-full bg-neonOrange rounded-full transition-all duration-500" style="width: 0%"></div>
+                                </div>
+                            </div>
+
+                            <!-- Carbs (Углеводы) -->
+                            <div class="bg-bgElevated/70 p-3.5 rounded-2xl border border-white/5">
+                                <div class="flex justify-between items-center text-xs mb-1.5">
+                                    <span class="font-bold text-white flex items-center gap-1.5">
+                                        <span class="w-2.5 h-2.5 rounded-full bg-neonLime inline-block"></span> Углеводы (У)
+                                    </span>
+                                    <div class="font-mono">
+                                        <span id="carbEaten" class="font-bold text-white">0</span>
+                                        <span class="text-gray-400"> / <span id="carbTarget">230</span> г</span>
+                                        <span id="carbLeft" class="ml-1.5 text-[11px] text-neonLime">(ост. 230г)</span>
+                                    </div>
+                                </div>
+                                <div class="w-full h-2.5 bg-black/50 rounded-full overflow-hidden">
+                                    <div id="carbBar" class="h-full bg-neonLime rounded-full transition-all duration-500" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Hydration & Today's Workout Preview (5 cols on lg) -->
+                <div class="lg:col-span-5 flex flex-col justify-between gap-5">
+                    
+                    <!-- Water Tracker Card -->
+                    <div class="glass-card rounded-3xl p-5 relative overflow-hidden">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center gap-2.5">
+                                <div class="w-10 h-10 rounded-2xl bg-neonCyan/15 border border-neonCyan/30 flex items-center justify-center text-neonCyan">
+                                    <i class="ph-fill ph-drop text-xl"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-sm font-bold text-white">Водный баланс</h3>
+                                    <p class="text-xs text-gray-400">Цель: <span id="waterTargetVal" class="font-mono text-gray-300">2500</span> мл</p>
+                                </div>
+                            </div>
+                            <div class="text-right font-mono">
+                                <span id="waterCurrentVal" class="text-xl font-extrabold text-neonCyan">0</span>
+                                <span class="text-xs text-gray-400">мл</span>
+                            </div>
+                        </div>
+
+                        <div class="w-full h-3 bg-black/50 rounded-full overflow-hidden mb-3 border border-white/5">
+                            <div id="waterBar" class="h-full bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full transition-all duration-500" style="width: 0%"></div>
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-2">
+                            <button onclick="addWater(250)" class="py-2 px-3 rounded-xl bg-neonCyan/15 hover:bg-neonCyan/25 border border-neonCyan/30 text-neonCyan font-mono text-xs font-bold flex items-center justify-center gap-1 transition active:scale-95">
+                                <i class="ph-bold ph-plus"></i> 250 мл
+                            </button>
+                            <button onclick="addWater(500)" class="py-2 px-3 rounded-xl bg-neonCyan/15 hover:bg-neonCyan/25 border border-neonCyan/30 text-neonCyan font-mono text-xs font-bold flex items-center justify-center gap-1 transition active:scale-95">
+                                <i class="ph-bold ph-plus"></i> 500 мл
+                            </button>
+                            <button onclick="addWater(-250)" class="py-2 px-3 rounded-xl bg-bgElevated hover:bg-white/10 border border-white/10 text-gray-400 font-mono text-xs font-semibold flex items-center justify-center gap-1 transition active:scale-95">
+                                <i class="ph-bold ph-minus"></i> 250
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Today's Scheduled Workout Card -->
+                    <div class="glass-card rounded-3xl p-5 flex-1 flex flex-col justify-between border border-neonPurple/20">
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-neonPurple/15 text-neonPurple border border-neonPurple/30">
+                                    План нагрузки на сегодня
+                                </span>
+                                <span id="dashWorkoutDayBadge" class="text-xs font-mono text-gray-400">Пн</span>
+                            </div>
+                            <h3 id="dashWorkoutTitle" class="text-lg font-extrabold text-white mt-1">Грудь + Трицепс (Силовая)</h3>
+                            <p id="dashWorkoutProgressText" class="text-xs text-gray-400 mt-1">Выполнено 0 из 4 упражнений</p>
+                        </div>
+
+                        <div class="mt-4 pt-3 border-t border-white/5 flex items-center justify-between">
+                            <div class="flex items-center gap-2 text-xs text-neonCyan font-mono">
+                                <i class="ph-fill ph-fire"></i>
+                                <span id="dashWorkoutBurnPreview">~380 ккал за тренировку</span>
+                            </div>
+                            <button onclick="switchTab('workouts')" class="px-4 py-2 rounded-xl bg-neonPurple hover:bg-purple-500 text-white font-bold text-xs transition flex items-center gap-1.5 shadow-lg shadow-neonPurple/20">
+                                Открыть план <i class="ph-bold ph-arrow-right"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Quick Checklist Preview: Planned Meals & Exercises Today -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                
+                <!-- Quick Meal Plan Checklist -->
+                <div class="glass-card rounded-3xl p-5">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h3 class="text-base font-bold text-white flex items-center gap-2">
+                                <i class="ph-fill ph-check-square-offset text-neonLime"></i> Чек-лист питания по плану
+                            </h3>
+                            <p class="text-xs text-gray-400">Отмечай съеденное — КБЖУ зачислится само (+15 XP)</p>
+                        </div>
+                        <button onclick="switchTab('nutrition')" class="text-xs text-neonLime font-semibold hover:underline">Все меню</button>
+                    </div>
+                    <div id="dashMealPlanList" class="space-y-2.5">
+                        <!-- Dynamically populated from state.mealPlan -->
+                    </div>
+                </div>
+
+                <!-- Today's Logged History (Food + Extra Activity) -->
+                <div class="glass-card rounded-3xl p-5 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <div>
+                                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                                    <i class="ph-fill ph-list-bullets text-neonCyan"></i> Журнал записей за день
+                                </h3>
+                                <p class="text-xs text-gray-400">Все съеденные продукты и активности</p>
+                            </div>
+                            <span id="dashLogCount" class="text-xs font-mono px-2 py-0.5 rounded-md bg-white/5 text-gray-300">0 зап.</span>
+                        </div>
+                        <div id="dashHistoryList" class="space-y-2 max-h-64 overflow-y-auto pr-1">
+                            <!-- Dynamically populated -->
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- TAB 2: NUTRITION & MEAL PLAN (ПИТАНИЕ)     -->
+        <!-- ========================================== -->
+        <section id="tab-nutrition" class="space-y-6 hidden">
+            
+            <!-- Sub-header with Macro Mini Bar & Scanner CTA -->
+            <div class="glass-card rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4 border border-neonLime/20">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-neonLime/15 flex items-center justify-center text-neonLime">
+                        <i class="ph-fill ph-bowl-food text-xl"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-sm font-bold text-white flex items-center gap-2">
+                            Мега-База Продуктів UA (АТБ / Сільпо) & Страв
+                            <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-blue-500/20 text-yellow-300 border border-yellow-400/30">🇺🇦 UA MARKET</span>
+                        </h2>
+                        <p class="text-xs text-gray-400">200+ товарів України (Яготинське, Галичина, Молокія, Своя Лінія, Наша Ряба, Fizi) + розумний пошук з вагою</p>
+                    </div>
+                </div>
+                <div class="flex flex-wrap items-center gap-3">
+                    <div class="flex items-center gap-3 font-mono text-xs bg-bgElevated px-3 py-2 rounded-xl border border-white/5">
+                        <div><span class="text-gray-400">Ккал:</span> <strong id="nutHeaderCal" class="text-neonLime">0/2200</strong></div>
+                        <div><span class="text-gray-400">Б:</span> <strong id="nutHeaderP" class="text-neonCyan">0г</strong></div>
+                        <div><span class="text-gray-400">Ж:</span> <strong id="nutHeaderF" class="text-neonOrange">0г</strong></div>
+                        <div><span class="text-gray-400">У:</span> <strong id="nutHeaderC" class="text-neonLime">0г</strong></div>
+                    </div>
+                    <button onclick="openScannerModal()" class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-neonCyan to-neonLime text-black font-extrabold text-xs flex items-center gap-1.5 shadow-lg shadow-neonLime/10 transition active:scale-95">
+                        <i class="ph-bold ph-qr-code text-base"></i> Сканер 482... / QR
+                    </button>
+                </div>
+            </div>
+
+            <!-- MASSIVE FOOD & DISHES CATALOG -->
+            <div class="glass-card rounded-3xl p-5 border border-white/10 space-y-4">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <h3 class="text-base font-extrabold text-white flex items-center gap-2">
+                            <i class="ph-fill ph-magnifying-glass text-neonLime"></i> Каталог продуктів та готових страв України
+                            <span id="dbCountBadge" class="text-[11px] font-mono px-2 py-0.5 rounded-full bg-neonLime/15 text-neonLime border border-neonLime/30">200+</span>
+                        </h3>
+                        <p class="text-xs text-gray-400">Пиши українською або російською одразу з грамажем — напр. <b class="text-gray-200">«Сир кисломолочний 5% 180г»</b> або <b class="text-gray-200">«Галичина 280г»</b></p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="openQrGeneratorModal()" class="px-3 py-1.5 rounded-xl bg-neonPurple/15 hover:bg-neonPurple/25 text-neonPurple border border-neonPurple/30 text-xs font-bold flex items-center gap-1 transition">
+                            <i class="ph-bold ph-qr-code"></i> Створити QR страви
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Search Bar + Online API Search Trigger -->
+                <div class="space-y-2">
+                    <div class="flex flex-col sm:flex-row gap-2.5">
+                        <div class="relative flex-1">
+                            <i class="ph-bold ph-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                            <input type="text" id="foodDbSearchInput" oninput="handleFoodSearchInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();searchOnlineOpenFoodFacts();}" placeholder="Введи продукт або бренд і вагу (напр. Сир кисломолочний 5% 180г, Галичина, Наша Ряба, Своя Лінія)..." class="w-full bg-bgElevated border border-white/10 rounded-xl pl-10 pr-9 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-neonLime">
+                            <button onclick="clearFoodSearch()" id="clearSearchBtn" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white">
+                                <i class="ph-bold ph-x"></i>
+                            </button>
+                        </div>
+                        <button onclick="searchOnlineOpenFoodFacts()" id="onlineSearchBtn" class="px-4 py-2.5 rounded-xl bg-neonCyan/15 hover:bg-neonCyan/25 text-neonCyan border border-neonCyan/30 text-xs font-bold flex items-center justify-center gap-1.5 shrink-0 transition">
+                            <i class="ph-bold ph-globe-hemisphere-east text-base"></i> Пошук по супермаркетах UA
+                        </button>
+                    </div>
+
+                    <!-- Quick UA Market Search Chips -->
+                    <div class="flex flex-wrap items-center gap-1.5 pt-0.5">
+                        <span class="text-[10px] text-gray-400 font-semibold mr-1">🇺🇦 Популярні запити:</span>
+                        <button onclick="quickSearchChip('Сир кисломолочний 5% 180г')" class="text-[11px] px-2.5 py-1 rounded-lg bg-white/5 hover:bg-neonLime/20 hover:text-neonLime text-gray-300 border border-white/10 transition">🧀 Сир кисломолочний 5% 180г</button>
+                        <button onclick="quickSearchChip('Йогурт Галичина 280г')" class="text-[11px] px-2.5 py-1 rounded-lg bg-white/5 hover:bg-neonLime/20 hover:text-neonLime text-gray-300 border border-white/10 transition">🥛 Йогурт Галичина 280г</button>
+                        <button onclick="quickSearchChip('Молокія White Power 250г')" class="text-[11px] px-2.5 py-1 rounded-lg bg-white/5 hover:bg-neonLime/20 hover:text-neonLime text-gray-300 border border-white/10 transition">💪 Молокія Білковий 250г</button>
+                        <button onclick="quickSearchChip('Наша Ряба філе 200г')" class="text-[11px] px-2.5 py-1 rounded-lg bg-white/5 hover:bg-neonLime/20 hover:text-neonLime text-gray-300 border border-white/10 transition">🍗 Наша Ряба філе 200г</button>
+                        <button onclick="quickSearchChip('Своя Лінія тунець 185г')" class="text-[11px] px-2.5 py-1 rounded-lg bg-white/5 hover:bg-neonLime/20 hover:text-neonLime text-gray-300 border border-white/10 transition">🐟 Тунець Своя Лінія 185г</button>
+                        <button onclick="quickSearchChip('Fizi протеїновий 45г')" class="text-[11px] px-2.5 py-1 rounded-lg bg-white/5 hover:bg-neonLime/20 hover:text-neonLime text-gray-300 border border-white/10 transition">🍫 Батончик Fizi 45г</button>
+                        <button onclick="quickSearchChip('Борщ український 350г')" class="text-[11px] px-2.5 py-1 rounded-lg bg-white/5 hover:bg-neonLime/20 hover:text-neonLime text-gray-300 border border-white/10 transition">🍲 Борщ 350г</button>
+                    </div>
+                </div>
+
+                <!-- Category Filter Pills -->
+                <div id="foodCategoryTabs" class="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+                    <!-- Populated via JS -->
+                </div>
+
+                <!-- Selected Product Portion Calculator Bar -->
+                <div id="selectedFoodPortionBox" class="bg-gradient-to-r from-bgElevated via-bgElevated to-neonLime/10 p-4 rounded-2xl border border-neonLime/40 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                    <div class="space-y-1">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span id="selFoodCatBadge" class="text-[10px] font-bold uppercase px-2 py-0.5 rounded-md bg-white/10 text-neonLime">Стравы</span>
+                            <span class="text-xs text-gray-400 font-mono">На 100г: <span id="selFoodBaseInfo">165 ккал (Б:31 Ж:3.6 У:0)</span></span>
+                            <span id="autoWeightDetectedBadge" class="hidden text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-neonCyan/20 text-neonCyan border border-neonCyan/40">⚡ Авто-вага з запиту</span>
+                        </div>
+                        <h4 id="selFoodTitle" class="text-base font-extrabold text-white">Куриное филе (грудка запеченная/вар.)</h4>
+                        <div id="selFoodCalcMacros" class="flex flex-wrap gap-3 font-mono text-xs pt-0.5">
+                            <span class="text-white font-bold">Итого: <strong class="text-neonLime text-sm">248 ккал</strong></span>
+                            <span>Белки: <b class="text-neonCyan">47г</b></span>
+                            <span>Жиры: <b class="text-neonOrange">5г</b></span>
+                            <span>Углеводы: <b class="text-neonLime">0г</b></span>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
+                        <!-- Quick Gram Buttons (including Ukrainian standard 180g pack) -->
+                        <div class="flex flex-wrap items-center gap-1 bg-black/40 p-1 rounded-xl border border-white/5">
+                            <button onclick="setPortionGrams(50)" class="px-2 py-1 rounded-lg text-[11px] font-mono text-gray-300 hover:bg-white/10">50г</button>
+                            <button onclick="setPortionGrams(100)" class="px-2 py-1 rounded-lg text-[11px] font-mono text-gray-300 hover:bg-white/10">100г</button>
+                            <button onclick="setPortionGrams(150)" class="px-2 py-1 rounded-lg text-[11px] font-mono text-gray-300 hover:bg-white/10">150г</button>
+                            <button onclick="setPortionGrams(180)" class="px-2 py-1 rounded-lg text-[11px] font-mono text-neonLime font-bold bg-neonLime/10 hover:bg-neonLime/20 border border-neonLime/30" title="Стандартна пачка сиру 180г">180г</button>
+                            <button onclick="setPortionGrams(200)" class="px-2 py-1 rounded-lg text-[11px] font-mono text-gray-300 hover:bg-white/10">200г</button>
+                            <button onclick="setPortionGrams(250)" class="px-2 py-1 rounded-lg text-[11px] font-mono text-gray-300 hover:bg-white/10">250г</button>
+                            <button onclick="setPortionGrams(300)" class="px-2 py-1 rounded-lg text-[11px] font-mono text-gray-300 hover:bg-white/10">300г</button>
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            <div class="relative w-24">
+                                <input type="number" id="presetGramsInput" value="180" oninput="updatePresetPreview()" class="w-full bg-black/60 border border-neonLime/50 rounded-xl px-2.5 py-2 font-mono text-sm font-bold text-white text-center focus:outline-none">
+                                <span class="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-400 font-mono">г/мл</span>
+                            </div>
+                            <button onclick="logPresetFood()" class="py-2.5 px-4 rounded-xl bg-neonLime hover:bg-lime-400 text-black font-extrabold text-xs transition active:scale-95 flex items-center gap-1.5 shadow-lg shadow-neonLime/20">
+                                <i class="ph-bold ph-plus-circle text-base"></i> Записати
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Online Search Results Box (Hidden by default) -->
+                <div id="onlineSearchResultsContainer" class="hidden space-y-2 pt-2 border-t border-white/10">
+                    <div class="flex items-center justify-between">
+                        <span id="onlineSearchHeaderTitle" class="text-xs font-bold text-neonCyan flex items-center gap-1.5">
+                            <i class="ph-fill ph-globe"></i> Результати пошуку по ринку України (ua.openfoodfacts.org + Реєстр Супермаркетів UA):
+                        </span>
+                        <button onclick="document.getElementById('onlineSearchResultsContainer').classList.add('hidden')" class="text-xs text-gray-400 hover:text-white">Сховати</button>
+                    </div>
+                    <div id="onlineFoodGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-64 overflow-y-auto pr-1"></div>
+                </div>
+
+                <!-- Food Items Grid -->
+                <div id="foodDatabaseGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-80 overflow-y-auto pr-1">
+                    <!-- Populated via JS -->
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                
+                <!-- Left Column: Pre-planned Daily Meal Schedule (7 cols) -->
+                <div class="lg:col-span-7 space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-base font-extrabold text-white flex items-center gap-2">
+                            <i class="ph-fill ph-calendar-check text-neonLime"></i> Прописанный план питания
+                        </h3>
+                        <button onclick="openAddPlannedMealModal()" class="px-3 py-1.5 rounded-xl bg-neonLime/15 hover:bg-neonLime/25 text-neonLime border border-neonLime/30 text-xs font-bold flex items-center gap-1 transition">
+                            <i class="ph-bold ph-plus"></i> Добавить в план
+                        </button>
+                    </div>
+
+                    <div id="fullMealPlanContainer" class="space-y-3">
+                        <!-- Populated via JS -->
+                    </div>
+                </div>
+
+                <!-- Right Column: Custom Dish Creator & Manual Entry (5 cols) -->
+                <div class="lg:col-span-5 space-y-5">
+
+                    <!-- Manual Custom Food Entry + Save to Catalog -->
+                    <div class="glass-card rounded-3xl p-5">
+                        <h3 class="text-sm font-bold text-white flex items-center gap-2 mb-1">
+                            <i class="ph-fill ph-cooking-pot text-neonPurple"></i> Своя страва / Продукт вручну
+                        </h3>
+                        <p class="text-xs text-gray-400 mb-3">Запиши одразу в щоденник або збережи у базу страв назавжди</p>
+                        <form onsubmit="handleCustomFoodSubmit(event)" class="space-y-3">
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                <input type="text" id="customFoodName" required placeholder="Назва страви (напр. Мамин Борщ / Сирники)" class="sm:col-span-2 w-full bg-bgElevated border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-neonLime">
+                                <select id="customFoodCat" class="w-full bg-bgElevated border border-white/10 rounded-xl px-2.5 py-2 text-xs text-white focus:outline-none focus:border-neonLime">
+                                    <option value="🇺🇦 Супермаркети UA">🇺🇦 Супермаркети UA</option>
+                                    <option value="Готовые стравы">🍲 Готові страви</option>
+                                    <option value="Молочка и Яйца">🧀 Молочка та Сир</option>
+                                    <option value="Мясо и Птица">🥩 М'ясо та Птиця</option>
+                                    <option value="Рыба и Морепродукты">🐟 Риба</option>
+                                    <option value="Крупы и Гарниры">🍚 Гарніри</option>
+                                    <option value="Овощи и Фрукты">🥑 Овочі/Фрукти</option>
+                                    <option value="Спортпит и Снеки">⚡ Спортхарч/Батончики</option>
+                                </select>
+                            </div>
+                            <div class="grid grid-cols-4 gap-2">
+                                <div>
+                                    <label class="text-[10px] text-gray-400 block mb-1">Ккал (на 100г/порц)</label>
+                                    <input type="number" step="any" id="customFoodCal" required placeholder="350" class="w-full bg-bgElevated border border-white/10 rounded-xl px-2.5 py-2 font-mono text-xs text-white focus:outline-none focus:border-neonLime">
+                                </div>
+                                <div>
+                                    <label class="text-[10px] text-neonCyan block mb-1">Белки (г)</label>
+                                    <input type="number" step="any" id="customFoodP" required placeholder="25" class="w-full bg-bgElevated border border-white/10 rounded-xl px-2.5 py-2 font-mono text-xs text-white focus:outline-none focus:border-neonCyan">
+                                </div>
+                                <div>
+                                    <label class="text-[10px] text-neonOrange block mb-1">Жиры (г)</label>
+                                    <input type="number" step="any" id="customFoodF" required placeholder="12" class="w-full bg-bgElevated border border-white/10 rounded-xl px-2.5 py-2 font-mono text-xs text-white focus:outline-none focus:border-neonOrange">
+                                </div>
+                                <div>
+                                    <label class="text-[10px] text-neonLime block mb-1">Углев. (г)</label>
+                                    <input type="number" step="any" id="customFoodC" required placeholder="35" class="w-full bg-bgElevated border border-white/10 rounded-xl px-2.5 py-2 font-mono text-xs text-white focus:outline-none focus:border-neonLime">
+                                </div>
+                            </div>
+                            <label class="flex items-center gap-2 text-xs text-gray-300 cursor-pointer select-none pt-1">
+                                <input type="checkbox" id="saveToPermanentDbCheck" checked class="rounded accent-neonLime w-4 h-4">
+                                <span>Сохранить эту страву в мою постоянную базу продуктов ⭐</span>
+                            </label>
+                            <button type="submit" class="w-full py-2.5 rounded-xl bg-neonPurple/20 hover:bg-neonPurple/30 text-neonPurple font-bold text-xs border border-neonPurple/40 transition flex items-center justify-center gap-1.5">
+                                <i class="ph-bold ph-check"></i> Записать в дневник (+10 XP)
+                            </button>
+                        </form>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- TAB 3: WORKOUT PLAN & ACTIVITY (НАГРУЗКИ)  -->
+        <!-- ========================================== -->
+        <section id="tab-workouts" class="space-y-6 hidden">
+            
+            <!-- Weekly Day Selector Bar (Пн - Вс) -->
+            <div class="glass-card rounded-3xl p-4 sm:p-5">
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+                    <div>
+                        <h2 class="text-base font-extrabold text-white flex items-center gap-2">
+                            <i class="ph-fill ph-barbell text-neonCyan"></i> Недельный сплит и План нагрузок
+                        </h2>
+                        <p class="text-xs text-gray-400">Меняй рабочий вес, отмечай выполненные подходы и забирай XP</p>
+                    </div>
+                    <button onclick="openAddExerciseModal()" class="px-3 py-1.5 rounded-xl bg-neonCyan/15 hover:bg-neonCyan/25 text-neonCyan border border-neonCyan/30 text-xs font-bold flex items-center gap-1 transition">
+                        <i class="ph-bold ph-plus"></i> + Упражнение в день
+                    </button>
+                </div>
+
+                <!-- 7-Day Selector Buttons -->
+                <div id="weekDaySelector" class="grid grid-cols-7 gap-1.5 sm:gap-2.5">
+                    <!-- Populated via JS -->
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                
+                <!-- Selected Day Exercises Checklist (7 cols) -->
+                <div class="lg:col-span-7 space-y-4">
+                    <div class="flex items-center justify-between bg-bgElevated px-4 py-3 rounded-2xl border border-white/5">
+                        <div>
+                            <span id="selectedDayLabel" class="text-[11px] font-mono uppercase text-neonCyan">Понедельник</span>
+                            <h3 id="selectedDaySplitTitle" class="text-lg font-extrabold text-white">Грудь + Трицепс + Передняя дельта</h3>
+                        </div>
+                        <button onclick="editDaySplitTitle()" class="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white text-xs" title="Изменить название дня">
+                            <i class="ph ph-pencil-simple text-base"></i>
+                        </button>
+                    </div>
+
+                    <div id="workoutExercisesContainer" class="space-y-3">
+                        <!-- Exercises populated via JS -->
+                    </div>
+                </div>
+
+                <!-- Extra Cardio / Steps / Custom Activity Logger (5 cols) -->
+                <div class="lg:col-span-5 space-y-5">
+                    <div class="glass-card rounded-3xl p-5 border border-neonCyan/20">
+                        <h3 class="text-sm font-bold text-white flex items-center gap-2 mb-3">
+                            <i class="ph-fill ph-person-simple-run text-neonCyan"></i> Быстрая запись доп. активности
+                        </h3>
+                        <p class="text-xs text-gray-400 mb-4">Шаги, кардио, бокс или любая активность сверх плана</p>
+
+                        <!-- Quick Activity Presets -->
+                        <div class="grid grid-cols-2 gap-2 mb-4">
+                            <button onclick="quickLogActivity('10 000 Шагов', 320)" class="p-2.5 rounded-xl bg-bgElevated hover:bg-white/10 border border-white/5 text-left transition flex items-center justify-between">
+                                <div>
+                                    <span class="text-xs font-bold text-white block">👟 10к Шагов</span>
+                                    <span class="text-[10px] font-mono text-neonCyan">-320 ккал</span>
+                                </div>
+                                <i class="ph-bold ph-plus text-neonCyan"></i>
+                            </button>
+                            <button onclick="quickLogActivity('Бег / Дорожка 30 мин', 300)" class="p-2.5 rounded-xl bg-bgElevated hover:bg-white/10 border border-white/5 text-left transition flex items-center justify-between">
+                                <div>
+                                    <span class="text-xs font-bold text-white block">🏃 Бег 30м</span>
+                                    <span class="text-[10px] font-mono text-neonCyan">-300 ккал</span>
+                                </div>
+                                <i class="ph-bold ph-plus text-neonCyan"></i>
+                            </button>
+                            <button onclick="quickLogActivity('Велотренажер / HIIT', 260)" class="p-2.5 rounded-xl bg-bgElevated hover:bg-white/10 border border-white/5 text-left transition flex items-center justify-between">
+                                <div>
+                                    <span class="text-xs font-bold text-white block">🚴 HIIT Кардио</span>
+                                    <span class="text-[10px] font-mono text-neonCyan">-260 ккал</span>
+                                </div>
+                                <i class="ph-bold ph-plus text-neonCyan"></i>
+                            </button>
+                            <button onclick="quickLogActivity('Растяжка / МФР 20 мин', 90)" class="p-2.5 rounded-xl bg-bgElevated hover:bg-white/10 border border-white/5 text-left transition flex items-center justify-between">
+                                <div>
+                                    <span class="text-xs font-bold text-white block">🧘 МФР / Кор</span>
+                                    <span class="text-[10px] font-mono text-neonCyan">-90 ккал</span>
+                                </div>
+                                <i class="ph-bold ph-plus text-neonCyan"></i>
+                            </button>
+                        </div>
+
+                        <!-- Custom Activity Form -->
+                        <form onsubmit="handleCustomActivitySubmit(event)" class="space-y-3 pt-3 border-t border-white/5">
+                            <div>
+                                <input type="text" id="customActName" required placeholder="Своя активность (напр. Баскетбол 45 мин)" class="w-full bg-bgElevated border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-neonCyan">
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <input type="number" id="customActBurn" required placeholder="Сожжено ккал (напр. 400)" class="w-full bg-bgElevated border border-white/10 rounded-xl px-3 py-2 font-mono text-xs text-white focus:outline-none focus:border-neonCyan">
+                                <button type="submit" class="py-2 px-4 rounded-xl bg-neonCyan text-black font-bold text-xs hover:bg-cyan-300 transition">
+                                    Записать (+15 XP)
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- TAB 4: CALCULATOR & SETTINGS (НАСТРОЙКИ)   -->
+        <!-- ========================================== -->
+        <section id="tab-settings" class="space-y-6 hidden">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                
+                <!-- Smart KBJU Calculator (Mifflin-St Jeor) -->
+                <div class="glass-card rounded-3xl p-6">
+                    <h2 class="text-base font-extrabold text-white flex items-center gap-2 mb-1">
+                        <i class="ph-fill ph-calculator text-neonLime"></i> Умный калькулятор КБЖУ
+                    </h2>
+                    <p class="text-xs text-gray-400 mb-5">Авторасчет нормы по формуле Миффлина — Сан Жеора под твою цель</p>
+
+                    <form onsubmit="calculateOptimalKBJU(event)" class="space-y-4">
+                        <div class="grid grid-cols-3 gap-3">
+                            <div>
+                                <label class="text-xs text-gray-400 block mb-1">Вес (кг)</label>
+                                <input type="number" id="calcWeight" value="78" required class="w-full bg-bgElevated border border-white/10 rounded-xl px-3 py-2 font-mono text-sm text-white">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-400 block mb-1">Рост (см)</label>
+                                <input type="number" id="calcHeight" value="180" required class="w-full bg-bgElevated border border-white/10 rounded-xl px-3 py-2 font-mono text-sm text-white">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-400 block mb-1">Возраст</label>
+                                <input type="number" id="calcAge" value="25" required class="w-full bg-bgElevated border border-white/10 rounded-xl px-3 py-2 font-mono text-sm text-white">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="text-xs text-gray-400 block mb-1">Уровень активности</label>
+                            <select id="calcActivity" class="w-full bg-bgElevated border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white">
+                                <option value="1.2">Сидячий (офис, мало движений)</option>
+                                <option value="1.375">Легкий (1–3 тренировки в неделю)</option>
+                                <option value="1.55" selected>Средний (3–5 силовых тренировок)</option>
+                                <option value="1.725">Высокий (6–7 тренировок / физ. работа)</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="text-xs text-gray-400 block mb-1">Твоя цель</label>
+                            <select id="calcGoal" class="w-full bg-bgElevated border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white">
+                                <option value="cut">🔥 Сушка / Дефицит (-18% ккал, высокий белок)</option>
+                                <option value="recomp" selected>⚡ Рекомпозиция / Поддержание</option>
+                                <option value="bulk">💪 Набор чистой массы (+15% профицит)</option>
+                            </select>
+                        </div>
+
+                        <button type="submit" class="w-full py-3 rounded-xl bg-neonLime hover:bg-lime-400 text-black font-extrabold text-sm transition shadow-lg shadow-neonLime/15">
+                            Рассчитать и применить КБЖУ
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Manual Target Override & System Reset -->
+                <div class="space-y-6">
+                    <div class="glass-card rounded-3xl p-6">
+                        <h2 class="text-base font-extrabold text-white flex items-center gap-2 mb-1">
+                            <i class="ph-fill ph-sliders text-neonCyan"></i> Ручная настройка целей КБЖУ
+                        </h2>
+                        <p class="text-xs text-gray-400 mb-4">Можешь задать свои точные цифры на день</p>
+
+                        <form onsubmit="saveManualTargets(event)" class="space-y-3">
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="text-xs text-gray-400 block mb-1">Калории (ккал)</label>
+                                    <input type="number" id="manualCal" required class="w-full bg-bgElevated border border-white/10 rounded-xl px-3 py-2 font-mono text-sm text-neonLime">
+                                </div>
+                                <div>
+                                    <label class="text-xs text-gray-400 block mb-1">Вода (мл)</label>
+                                    <input type="number" id="manualWater" required class="w-full bg-bgElevated border border-white/10 rounded-xl px-3 py-2 font-mono text-sm text-neonCyan">
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-3 gap-3">
+                                <div>
+                                    <label class="text-xs text-neonCyan block mb-1">Белки (г)</label>
+                                    <input type="number" id="manualP" required class="w-full bg-bgElevated border border-white/10 rounded-xl px-3 py-2 font-mono text-sm text-white">
+                                </div>
+                                <div>
+                                    <label class="text-xs text-neonOrange block mb-1">Жиры (г)</label>
+                                    <input type="number" id="manualF" required class="w-full bg-bgElevated border border-white/10 rounded-xl px-3 py-2 font-mono text-sm text-white">
+                                </div>
+                                <div>
+                                    <label class="text-xs text-neonLime block mb-1">Углеводы (г)</label>
+                                    <input type="number" id="manualC" required class="w-full bg-bgElevated border border-white/10 rounded-xl px-3 py-2 font-mono text-sm text-white">
+                                </div>
+                            </div>
+                            <button type="submit" class="w-full py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs border border-white/10 transition">
+                                Сохранить свои цели
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Reset Default Factory Plans -->
+                    <div class="glass-card rounded-3xl p-5 border border-red-500/20">
+                        <h3 class="text-sm font-bold text-white mb-1">Полный сброс к заводскому плану</h3>
+                        <p class="text-xs text-gray-400 mb-3">Вернуть исходные планы тренировок, питания и обнулить статистику.</p>
+                        <button onclick="factoryResetApp()" class="px-4 py-2 rounded-xl bg-red-500/15 hover:bg-red-500/25 text-red-400 border border-red-500/30 text-xs font-bold transition">
+                            Сбросить все данные
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Mobile Bottom Navigation Bar -->
+    <nav class="md:hidden fixed bottom-0 left-0 right-0 z-40 glass-nav px-2 py-2">
+        <div class="grid grid-cols-5 gap-1 max-w-md mx-auto items-center">
+            <button onclick="switchTab('dashboard')" id="mobTab-dashboard" class="flex flex-col items-center justify-center py-1.5 rounded-xl text-neonLime">
+                <i class="ph-fill ph-chart-pie-slice text-xl"></i>
+                <span class="text-[10px] font-bold mt-0.5">Сегодня</span>
+            </button>
+            <button onclick="switchTab('nutrition')" id="mobTab-nutrition" class="flex flex-col items-center justify-center py-1.5 rounded-xl text-gray-400">
+                <i class="ph-fill ph-fork-knife text-xl"></i>
+                <span class="text-[10px] font-medium mt-0.5">Стравы</span>
+            </button>
+            <button onclick="openScannerModal()" class="flex flex-col items-center justify-center -mt-4">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-neonLime to-neonCyan text-black flex items-center justify-center shadow-lg shadow-neonLime/30 border-2 border-black">
+                    <i class="ph-bold ph-qr-code text-2xl"></i>
+                </div>
+                <span class="text-[9px] font-extrabold text-neonLime mt-0.5">Сканер</span>
+            </button>
+            <button onclick="switchTab('workouts')" id="mobTab-workouts" class="flex flex-col items-center justify-center py-1.5 rounded-xl text-gray-400">
+                <i class="ph-fill ph-barbell text-xl"></i>
+                <span class="text-[10px] font-medium mt-0.5">Нагрузки</span>
+            </button>
+            <button onclick="switchTab('settings')" id="mobTab-settings" class="flex flex-col items-center justify-center py-1.5 rounded-xl text-gray-400">
+                <i class="ph-fill ph-sliders-horizontal text-xl"></i>
+                <span class="text-[10px] font-medium mt-0.5">Цели</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- ========================================== -->
+    <!-- MODALS & TOAST NOTIFICATION                -->
+    <!-- ========================================== -->
+
+    <!-- Toast Notification -->
+    <div id="toastBox" class="fixed top-16 right-4 z-50 pointer-events-none opacity-0 translate-y-[-10px] transition-all duration-300">
+        <div class="glass-card px-4 py-3 rounded-2xl border border-neonLime/40 shadow-2xl flex items-center gap-2.5">
+            <i id="toastIcon" class="ph-fill ph-check-circle text-neonLime text-xl"></i>
+            <span id="toastText" class="text-xs font-bold text-white">Записано!</span>
+        </div>
+    </div>
+
+    <!-- Modal: QR & Barcode Food Scanner -->
+    <div id="modalScanner" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md hidden items-center justify-center p-4 overflow-y-auto">
+        <div class="glass-card rounded-3xl max-w-lg w-full p-5 sm:p-6 border border-neonCyan/30 my-auto space-y-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-9 h-9 rounded-xl bg-neonCyan/20 border border-neonCyan/40 flex items-center justify-center text-neonCyan">
+                        <i class="ph-bold ph-qr-code text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-extrabold text-white">Сканер QR и Штрих-кодов на пище</h3>
+                        <p class="text-[11px] text-gray-400">Наведи камеру на упаковку (EAN-13) или VIBE-QR стравы</p>
+                    </div>
+                </div>
+                <button onclick="closeScannerModal()" class="p-1.5 rounded-xl bg-white/5 text-gray-400 hover:text-white">
+                    <i class="ph-bold ph-x text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Camera Viewport -->
+            <div class="relative rounded-2xl overflow-hidden bg-black border border-white/10 min-h-[220px] flex flex-col items-center justify-center">
+                <div id="qrReaderViewport" class="w-full"></div>
+                <div id="scannerPlaceholder" class="p-6 text-center space-y-3">
+                    <div class="w-14 h-14 rounded-2xl bg-neonLime/10 border border-neonLime/30 text-neonLime flex items-center justify-center mx-auto">
+                        <i class="ph-duotone ph-camera text-3xl"></i>
+                    </div>
+                    <p class="text-xs text-gray-300 max-w-xs mx-auto">Разреши доступ к камере, чтобы сканировать штрих-коды продуктов из супермаркета или QR-коды готовых блюд</p>
+                    <div class="flex flex-wrap justify-center gap-2">
+                        <button onclick="startCameraScanner()" id="startCamBtn" class="px-4 py-2.5 rounded-xl bg-neonLime text-black font-extrabold text-xs flex items-center gap-1.5 shadow-lg shadow-neonLime/20">
+                            <i class="ph-bold ph-video-camera"></i> Включить камеру
+                        </button>
+                        <label class="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-semibold text-xs cursor-pointer flex items-center gap-1.5">
+                            <i class="ph-bold ph-image"></i> Скан по фото
+                            <input type="file" accept="image/*" onchange="scanBarcodeFromFile(event)" class="hidden">
+                        </label>
+                    </div>
+                </div>
+                <button onclick="stopCameraScanner()" id="stopCamBtn" class="hidden absolute bottom-3 right-3 px-3 py-1.5 rounded-xl bg-red-500/80 text-white text-xs font-bold">
+                    Остановить камеру
+                </button>
+            </div>
+
+            <!-- Manual Barcode Input & Instant Demo Chips -->
+            <div class="space-y-2 pt-1">
+                <label class="text-[11px] text-gray-400 block">Або введи український штрих-код (482...) вручну чи протестуй на товарах з АТБ/Сільпо:</label>
+                <div class="flex gap-2">
+                    <input type="text" id="manualBarcodeInput" placeholder="Штрих-код товару (напр. 4820000191254)" class="flex-1 bg-bgElevated border border-white/10 rounded-xl px-3 py-2 font-mono text-xs text-white focus:outline-none focus:border-neonCyan">
+                    <button onclick="lookupBarcode(document.getElementById('manualBarcodeInput').value)" class="px-4 py-2 rounded-xl bg-neonCyan text-black font-bold text-xs shrink-0 hover:bg-cyan-300 transition">
+                        Знайти КБЖУ
+                    </button>
+                </div>
+
+                <!-- Demo Barcodes for Instant Ukrainian Testing -->
+                <div class="flex flex-wrap gap-1.5 pt-1">
+                    <span class="text-[10px] text-gray-400 self-center mr-1">🇺🇦 Тест штрих-кодів UA:</span>
+                    <button onclick="lookupBarcode('4820000191254')" class="text-[11px] px-2.5 py-1 rounded-lg bg-white/5 hover:bg-neonLime/20 text-gray-200 border border-white/10">🧀 Сир Яготинське 5% (180г)</button>
+                    <button onclick="lookupBarcode('4820195291043')" class="text-[11px] px-2.5 py-1 rounded-lg bg-white/5 hover:bg-neonLime/20 text-gray-200 border border-white/10">🛒 Сир Своя Лінія 5% (АТБ)</button>
+                    <button onclick="lookupBarcode('4820003685415')" class="text-[11px] px-2.5 py-1 rounded-lg bg-white/5 hover:bg-neonLime/20 text-gray-200 border border-white/10">🥛 Йогурт Галичина 2.2%</button>
+                    <button onclick="lookupBarcode('4820049670116')" class="text-[11px] px-2.5 py-1 rounded-lg bg-white/5 hover:bg-neonLime/20 text-gray-200 border border-white/10">🍗 Філе Наша Ряба</button>
+                    <button onclick="lookupBarcode('4820186820122')" class="text-[11px] px-2.5 py-1 rounded-lg bg-white/5 hover:bg-neonLime/20 text-gray-200 border border-white/10">🍫 Power Pro 36%</button>
+                    <button onclick="simulateCustomDishQR()" class="text-[11px] px-2.5 py-1 rounded-lg bg-neonPurple/15 hover:bg-neonPurple/25 text-neonPurple border border-neonPurple/30">🍲 QR Українського Борщу</button>
+                </div>
+            </div>
+
+            <!-- Scanned Product Result Card -->
+            <div id="scannedProductCard" class="hidden bg-bgElevated p-4 rounded-2xl border border-neonLime/40 space-y-3">
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <span id="scanResBrand" class="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-neonCyan/15 text-neonCyan">Бренд</span>
+                        <h4 id="scanResName" class="text-sm font-extrabold text-white mt-1">Название продукта</h4>
+                        <p id="scanResPer100" class="text-xs font-mono text-gray-400 mt-0.5">На 100г: 0 ккал</p>
+                    </div>
+                    <img id="scanResImg" src="https://placehold.co/60x60/1a1a26/a3e635?text=FOOD" alt="product" class="w-14 h-14 rounded-xl object-cover border border-white/10 shrink-0" onerror="this.src='https://placehold.co/60x60/1a1a26/a3e635?text=FOOD'">
+                </div>
+
+                <div class="flex items-center justify-between gap-2 pt-2 border-t border-white/10">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-gray-400">Вес (г/мл):</span>
+                        <input type="number" id="scanResGrams" value="100" oninput="updateScannedPreview()" class="w-20 bg-black/60 border border-white/15 rounded-xl px-2.5 py-1.5 font-mono text-xs font-bold text-white text-center">
+                    </div>
+                    <button onclick="confirmAddScannedProduct()" class="px-4 py-2 rounded-xl bg-neonLime text-black font-extrabold text-xs flex items-center gap-1.5">
+                        <i class="ph-bold ph-check"></i> Добавить в дневник (+15 XP)
+                    </button>
+                </div>
+                <div id="scanResCalcLine" class="text-[11px] font-mono text-neonLime text-right"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: QR Code Generator for Custom Dish -->
+    <div id="modalQrGenerator" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4">
+        <div class="glass-card rounded-3xl max-w-md w-full p-6 border border-neonPurple/30 space-y-4">
+            <div class="flex justify-between items-center">
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                    <i class="ph-bold ph-qr-code text-neonPurple"></i> Генератор QR для своей стравы
+                </h3>
+                <button onclick="closeModals()" class="text-gray-400 hover:text-white"><i class="ph-bold ph-x text-lg"></i></button>
+            </div>
+            <p class="text-xs text-gray-400">Создай QR-код для любого блюда или ланч-бокса. При сканировании через VIBE.FIT его КБЖУ мгновенно залетит в твой дневник!</p>
+            <div class="space-y-2.5">
+                <input type="text" id="qrGenTitle" value="Домашний Супер-Боул с лососем" placeholder="Название стравы" class="w-full bg-bgElevated border border-white/10 rounded-xl px-3 py-2 text-xs text-white">
+                <div class="grid grid-cols-4 gap-2">
+                    <div>
+                        <label class="text-[10px] text-gray-400 block mb-1">Ккал (100г)</label>
+                        <input type="number" id="qrGenCal" value="195" class="w-full bg-bgElevated border border-white/10 rounded-xl px-2 py-1.5 font-mono text-xs text-white">
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-neonCyan block mb-1">Белки</label>
+                        <input type="number" id="qrGenP" value="16" class="w-full bg-bgElevated border border-white/10 rounded-xl px-2 py-1.5 font-mono text-xs text-white">
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-neonOrange block mb-1">Жиры</label>
+                        <input type="number" id="qrGenF" value="9" class="w-full bg-bgElevated border border-white/10 rounded-xl px-2 py-1.5 font-mono text-xs text-white">
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-neonLime block mb-1">Углеводы</label>
+                        <input type="number" id="qrGenC" value="14" class="w-full bg-bgElevated border border-white/10 rounded-xl px-2 py-1.5 font-mono text-xs text-white">
+                    </div>
+                </div>
+                <button onclick="generateDishQRCode()" class="w-full py-2.5 rounded-xl bg-neonPurple text-white font-bold text-xs">Сгенерировать QR-код</button>
+            </div>
+            <div id="qrGenOutputBox" class="hidden flex flex-col items-center justify-center p-4 bg-white rounded-2xl">
+                <img id="qrGenImage" src="" alt="QR Code" class="w-44 h-44">
+                <span id="qrGenCaption" class="text-xs font-bold text-black mt-2"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Add Planned Meal -->
+    <div id="modalPlannedMeal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4">
+        <div class="glass-card rounded-3xl max-w-md w-full p-6 border border-white/10">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-base font-bold text-white">Добавить прием пищи в план</h3>
+                <button onclick="closeModals()" class="text-gray-400 hover:text-white"><i class="ph-bold ph-x text-lg"></i></button>
+            </div>
+            <form onsubmit="saveNewPlannedMeal(event)" class="space-y-3">
+                <div>
+                    <label class="text-xs text-gray-400 block mb-1">Прием пищи</label>
+                    <select id="planMealSlot" class="w-full bg-bgElevated border border-white/10 rounded-xl px-3 py-2 text-sm text-white">
+                        <option value="Завтрак">🌅 Завтрак</option>
+                        <option value="Обед">☀️ Обед</option>
+                        <option value="Перекус">⚡ Перекус / До тренировки</option>
+                        <option value="Ужин">🌙 Ужин</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs text-gray-400 block mb-1">Название блюда и граммовка</label>
+                    <input type="text" id="planMealTitle" required placeholder="напр. Творог 5% (200г) + Ягоды" class="w-full bg-bgElevated border border-white/10 rounded-xl px-3 py-2 text-sm text-white">
+                </div>
+                <div class="grid grid-cols-4 gap-2">
+                    <div>
+                        <label class="text-[10px] text-gray-400 block mb-1">Ккал</label>
+                        <input type="number" id="planMealCal" required placeholder="420" class="w-full bg-bgElevated border border-white/10 rounded-xl px-2.5 py-2 font-mono text-xs text-white">
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-neonCyan block mb-1">Б (г)</label>
+                        <input type="number" id="planMealP" required placeholder="35" class="w-full bg-bgElevated border border-white/10 rounded-xl px-2.5 py-2 font-mono text-xs text-white">
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-neonOrange block mb-1">Ж (г)</label>
+                        <input type="number" id="planMealF" required placeholder="12" class="w-full bg-bgElevated border border-white/10 rounded-xl px-2.5 py-2 font-mono text-xs text-white">
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-neonLime block mb-1">У (г)</label>
+                        <input type="number" id="planMealC" required placeholder="40" class="w-full bg-bgElevated border border-white/10 rounded-xl px-2.5 py-2 font-mono text-xs text-white">
+                    </div>
+                </div>
+                <button type="submit" class="w-full py-3 rounded-xl bg-neonLime text-black font-bold text-xs mt-2">Сохранить в постоянный план</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Add Exercise to Selected Day -->
+    <div id="modalAddExercise" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4">
+        <div class="glass-card rounded-3xl max-w-md w-full p-6 border border-white/10">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-base font-bold text-white">Добавить упражнение в план</h3>
+                <button onclick="closeModals()" class="text-gray-400 hover:text-white"><i class="ph-bold ph-x text-lg"></i></button>
+            </div>
+            <form onsubmit="saveNewExercise(event)" class="space-y-3">
+                <div>
+                    <label class="text-xs text-gray-400 block mb-1">Название упражнения</label>
+                    <input type="text" id="exTitleInput" required placeholder="напр. Жим гантелей на наклонной" class="w-full bg-bgElevated border border-white/10 rounded-xl px-3 py-2 text-sm text-white">
+                </div>
+                <div class="grid grid-cols-3 gap-2">
+                    <div>
+                        <label class="text-[10px] text-gray-400 block mb-1">Подходы x Повт.</label>
+                        <input type="text" id="exSetsInput" required placeholder="4 x 10-12" class="w-full bg-bgElevated border border-white/10 rounded-xl px-2.5 py-2 font-mono text-xs text-white">
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-neonCyan block mb-1">Вес (кг)</label>
+                        <input type="number" id="exWeightInput" required placeholder="30" class="w-full bg-bgElevated border border-white/10 rounded-xl px-2.5 py-2 font-mono text-xs text-white">
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-neonOrange block mb-1">Расход ккал</label>
+                        <input type="number" id="exBurnInput" required placeholder="95" class="w-full bg-bgElevated border border-white/10 rounded-xl px-2.5 py-2 font-mono text-xs text-white">
+                    </div>
+                </div>
+                <button type="submit" class="w-full py-3 rounded-xl bg-neonCyan text-black font-bold text-xs mt-2">Добавить в расписание</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: New Day / Reset Day -->
+    <div id="modalResetDay" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4">
+        <div class="glass-card rounded-3xl max-w-sm w-full p-6 border border-white/10 text-center">
+            <div class="w-12 h-12 rounded-2xl bg-neonCyan/20 text-neonCyan flex items-center justify-center mx-auto mb-3">
+                <i class="ph-fill ph-sun-horizon text-2xl"></i>
+            </div>
+            <h3 class="text-base font-bold text-white">Начать новый день?</h3>
+            <p class="text-xs text-gray-400 mt-1 mb-5">Счетчики съеденного КБЖУ, воды и галочки за сегодня обнулятся, а твой стрик (+1 день) и уровень XP сохранятся!</p>
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="closeModals()" class="py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-semibold">Отмена</button>
+                <button onclick="confirmNewDay()" class="py-2.5 rounded-xl bg-neonLime text-black text-xs font-extrabold">Новый день (+Стрик)</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =====================================================
+        // MASSIVE DATABASE OF UKRAINIAN SUPERMARKET FOODS & DISHES (200+ items per 100g)
+        // Supports both Ukrainian & Russian queries + default package weights (packGrams) + EAN-13 (482...)
+        // =====================================================
+        const INITIAL_FOOD_DB = [
+            // 🇺🇦 СУПЕРМАРКЕТИ УКРАЇНИ (АТБ, Сільпо, Яготинське, Галичина, Молокія, Своя Лінія, Наша Ряба, Fizi, Power Pro)
+            { id: "ua1", cat: "🇺🇦 Супермаркети UA", name: "Сир кисломолочний 5% «Яготинське» (Творог 5%)", cal: 121, p: 18.0, f: 5.0, c: 1.8, packGrams: 180, barcode: "4820000191254", kw: "творог сир кисломолочний яготинське 5% 180г 350г атб сільпо", fav: true },
+            { id: "ua2", cat: "🇺🇦 Супермаркети UA", name: "Сир кисломолочний 0% нежирний «Яготинське» (Творог 0%)", cal: 85, p: 18.5, f: 0.2, c: 1.8, packGrams: 180, barcode: "4820000191261", kw: "творог сир кисломолочний нежирний 0% яготинське 180г", fav: true },
+            { id: "ua3", cat: "🇺🇦 Супермаркети UA", name: "Сир кисломолочний 5% «Своя Лінія» АТБ (Творог 5%)", cal: 121, p: 17.5, f: 5.0, c: 1.8, packGrams: 180, barcode: "4820195291043", kw: "творог сир кисломолочний своя лінія линия атб 5% 180г 400г", fav: true },
+            { id: "ua4", cat: "🇺🇦 Супермаркети UA", name: "Сир кисломолочний 9% «Своя Лінія» АТБ (Творог 9%)", cal: 157, p: 16.5, f: 9.0, c: 1.9, packGrams: 180, barcode: "4820195291050", kw: "творог сир кисломолочний своя лінія атб 9% 180г" },
+            { id: "ua5", cat: "🇺🇦 Супермаркети UA", name: "Сир кисломолочний 5% «Ферма» (Творог 5%)", cal: 122, p: 18.0, f: 5.0, c: 1.5, packGrams: 180, barcode: "4820154170129", kw: "творог сир кисломолочний ферма 5% 180г 350г" },
+            { id: "ua6", cat: "🇺🇦 Супермаркети UA", name: "Сир кисломолочний 5% «Простоквашино» (Творог 5%)", cal: 121, p: 17.0, f: 5.0, c: 1.8, packGrams: 180, barcode: "4820058110452", kw: "творог сир кисломолочний простоквашино 5% 180г" },
+            { id: "ua7", cat: "🇺🇦 Супермаркети UA", name: "Сир кисломолочний зернистий 4% у вершках «Молокія»", cal: 105, p: 14.5, f: 4.0, c: 2.6, packGrams: 200, barcode: "4820011252142", kw: "творог зернистий зернений сир кисломолочний молокія молокия 4% 200г", fav: true },
+            { id: "ua8", cat: "🇺🇦 Супермаркети UA", name: "Сир кисломолочний 5% «Молокія» (180г)", cal: 120, p: 18.0, f: 5.0, c: 1.6, packGrams: 180, barcode: "4820011251084", kw: "творог сир кисломолочний молокія 5% 180г" },
+            { id: "ua9", cat: "🇺🇦 Супермаркети UA", name: "Сир кисломолочний 5% «Премія» Сільпо (180г)", cal: 121, p: 17.8, f: 5.0, c: 1.8, packGrams: 180, barcode: "4820112340014", kw: "творог сир кисломолочний премія премия сільпо сильпо 5% 180г" },
+            { id: "ua10", cat: "🇺🇦 Супермаркети UA", name: "Йогурт густий «Галичина» Карпатський 2.2% без цукру", cal: 62, p: 4.5, f: 2.2, c: 6.0, packGrams: 280, barcode: "4820003685415", kw: "йогурт галичина карпатський грецький густий 140г 280г", fav: true },
+            { id: "ua11", cat: "🇺🇦 Супермаркети UA", name: "Йогурт нежирний 0% «Галичина» Карпатський без цукру", cal: 43, p: 4.8, f: 0.1, c: 5.8, packGrams: 280, barcode: "4820003685422", kw: "йогурт галичина 0% карпатський нежирний 280г" },
+            { id: "ua12", cat: "🇺🇦 Супермаркети UA", name: "Йогурт високобілковий «Молокія» White Power / GO (20г білка)", cal: 74, p: 8.2, f: 1.5, c: 6.8, packGrams: 250, barcode: "4820011254887", kw: "йогурт протеїновий білковий молокія white power go 250г", fav: true },
+            { id: "ua13", cat: "🇺🇦 Супермаркети UA", name: "Йогурт Грецький «Своя Лінія» 2% натуральний (АТБ)", cal: 66, p: 7.5, f: 2.0, c: 4.5, packGrams: 200, barcode: "4820195293122", kw: "йогурт грецький греческий своя лінія атб 200г" },
+            { id: "ua14", cat: "🇺🇦 Супермаркети UA", name: "Кефір 2.5% «Галичина» / «Яготинське»", cal: 51, p: 3.0, f: 2.5, c: 4.0, packGrams: 250, barcode: "4820003681127", kw: "кефір кефир галичина яготинське 2.5% 450г 900г" },
+            { id: "ua15", cat: "🇺🇦 Супермаркети UA", name: "Кефір 1% нежирний «Яготинське» / «Своя Лінія»", cal: 40, p: 3.1, f: 1.0, c: 4.2, packGrams: 250, barcode: "4820000190882", kw: "кефір кефир 1% яготинське своя лінія атб" },
+            { id: "ua16", cat: "🇺🇦 Супермаркети UA", name: "Молоко 2.5% «Селянське» / «Яготинське» ультрапастеризоване", cal: 53, p: 2.8, f: 2.5, c: 4.7, packGrams: 200, barcode: "4820003410116", kw: "молоко селянське яготинське галичина своя лінія 2.5%" },
+            { id: "ua17", cat: "🇺🇦 Супермаркети UA", name: "Сметана 15% «Яготинське» / «Ферма» / «Своя Лінія»", cal: 158, p: 2.7, f: 15.0, c: 3.2, packGrams: 50, barcode: "4820000192114", kw: "сметана 15% яготинське ферма своя лінія атб" },
+            { id: "ua18", cat: "🇺🇦 Супермаркети UA", name: "Сир твердий «КОМО» Тенеро / Голландський 45%", cal: 332, p: 25.5, f: 25.2, c: 0, packGrams: 50, barcode: "4820046281155", kw: "сир твердий сыр комо тенеро голландський звенигора славія 150г" },
+            { id: "ua19", cat: "🇺🇦 Супермаркети UA", name: "Сир твердий «Звенигора» Добродій / Сметанковий 50%", cal: 348, p: 24.0, f: 28.0, c: 0, packGrams: 50, barcode: "4820015640211", kw: "сир твердий звенигора сметанковий" },
+            { id: "ua20", cat: "🇺🇦 Супермаркети UA", name: "Сир Моцарелла «Яготинське» / «Своя Лінія»", cal: 245, p: 19.0, f: 18.0, c: 1.0, packGrams: 100, barcode: "4820000195511", kw: "моцарелла сир яготинське своя лінія" },
+            { id: "ua21", cat: "🇺🇦 Супермаркети UA", name: "Сирок глазурований «Злагода» / «Волошкове Поле» ванільний", cal: 365, p: 10.5, f: 22.0, c: 31.0, packGrams: 36, barcode: "4820001310449", kw: "сирок глазурований сырок злагода волошкове поле своя лінія 36г 50г" },
+            { id: "ua22", cat: "🇺🇦 Супермаркети UA", name: "Філе куряче «Наша Ряба» Апетитне (запечене/відварне)", cal: 165, p: 31.0, f: 3.6, c: 0, packGrams: 200, barcode: "4820049670116", kw: "філе куряче куриное филе грудка наша ряба курка", fav: true },
+            { id: "ua23", cat: "🇺🇦 Супермаркети UA", name: "Філе куряче «Наша Ряба» охолоджене (сире)", cal: 113, p: 23.6, f: 1.9, c: 0, packGrams: 200, barcode: "4820049670123", kw: "філе куряче сире наша ряба курка" },
+            { id: "ua24", cat: "🇺🇦 Супермаркети UA", name: "Стегно куряче «Наша Ряба» без шкіри (запечене)", cal: 185, p: 24.5, f: 9.5, c: 0, packGrams: 180, barcode: "4820049670222", kw: "стегно куряче бедро куриное наша ряба гомілка" },
+            { id: "ua25", cat: "🇺🇦 Супермаркети UA", name: "Стріпси / Нагетси курячі «Легко!» / «Своя Лінія» запечені", cal: 218, p: 16.5, f: 10.5, c: 14.5, packGrams: 150, barcode: "4820049671151", kw: "нагетси наггетсы стріпси легко наша ряба своя лінія" },
+            { id: "ua26", cat: "🇺🇦 Супермаркети UA", name: "Сосиски Філейні курячі «Бащинський» / «Глобино»", cal: 192, p: 14.5, f: 14.0, c: 2.0, packGrams: 100, barcode: "4820064120115", kw: "сосиски філейні бащинський глобино ятрань" },
+            { id: "ua27", cat: "🇺🇦 Супермаркети UA", name: "Шинка куряча Філейна «Бащинський» / «Алан»", cal: 126, p: 18.5, f: 5.2, c: 1.2, packGrams: 100, barcode: "4820064120337", kw: "шинка ветчина куряча індича бащинський глобино алан" },
+            { id: "ua28", cat: "🇺🇦 Супермаркети UA", name: "Тунець у власному соку «Своя Лінія» АТБ / «Премія»", cal: 104, p: 24.0, f: 0.9, c: 0, packGrams: 140, barcode: "4820195294013", kw: "тунець тунец консервований своя лінія атб премія аквамарин 185г", fav: true },
+            { id: "ua29", cat: "🇺🇦 Супермаркети UA", name: "Лосось / Сьомга слабосолена «Своя Лінія» / «Премія»", cal: 202, p: 21.5, f: 13.0, c: 0, packGrams: 120, barcode: "4820195294228", kw: "лосось сьомга семга форель своя лінія премія Norven" },
+            { id: "ua30", cat: "🇺🇦 Супермаркети UA", name: "Крабові палички «Водний Світ» охолоджені", cal: 88, p: 6.5, f: 0.5, c: 14.2, packGrams: 100, barcode: "4820041180118", kw: "крабові палички крабовые палочки водний світ своя лінія" },
+            { id: "ua31", cat: "🇺🇦 Супермаркети UA", name: "Крупа гречана «Своя Лінія» / «Жменька» (відварна)", cal: 110, p: 4.2, f: 1.1, c: 21.3, packGrams: 200, barcode: "4820195295010", kw: "гречка гречана крупа своя лінія розумний вибір жменька" },
+            { id: "ua32", cat: "🇺🇦 Супермаркети UA", name: "Вівсяні пластівці «Козуб» / «Своя Лінія» Супергеркулес (сухі)", cal: 365, p: 13.0, f: 6.2, c: 61.5, packGrams: 70, barcode: "4820084110059", kw: "вівсянка овсянка пластівці геркулес козуб своя лінія брюгген", fav: true },
+            { id: "ua33", cat: "🇺🇦 Супермаркети UA", name: "Хлібці мультизернові «Жменька» / «Своя Лінія»", cal: 315, p: 10.5, f: 2.8, c: 62.0, packGrams: 30, barcode: "4820068190220", kw: "хлібці хлебцы рисові гречані жменька своя лінія" },
+            { id: "ua34", cat: "🇺🇦 Супермаркети UA", name: "Батончик протеїновий «Power Pro» 36% без цукру (60г)", cal: 318, p: 36.0, f: 9.5, c: 12.0, packGrams: 60, barcode: "4820186820122", kw: "батончик протеїновий протеиновый power pro павер про 36% 60г", fav: true },
+            { id: "ua35", cat: "🇺🇦 Супермаркети UA", name: "Батончик протеїновий «FIZI» Protein Bar в шоколаді (45г)", cal: 395, p: 28.0, f: 18.0, c: 26.0, packGrams: 45, barcode: "4820245110089", kw: "батончик фізі fizi протеїновий guilty pleasure 45г сільпо атб", fav: true },
+            { id: "ua36", cat: "🇺🇦 Супермаркети UA", name: "Батончик «ROSHEN» Tidbit / Шоколад Roshen Brut 80%", cal: 545, p: 9.5, f: 41.0, c: 32.0, packGrams: 45, barcode: "4823077615221", kw: "рошен roshen шоколад батончик цукерки" },
+            { id: "ua37", cat: "🇺🇦 Супермаркети UA", name: "Арахісова паста «ТОМ» (Україна) класична / кранчі без цукру", cal: 585, p: 26.0, f: 49.5, c: 11.5, packGrams: 30, barcode: "4820198810111", kw: "арахісова паста арахисовая том tom маслo" },
+            { id: "ua38", cat: "🇺🇦 Супермаркети UA", name: "Енергетичний напій «NON STOP» Ultra / Zero Sugar (0 ккал)", cal: 2, p: 0, f: 0, c: 0.4, packGrams: 500, barcode: "4820097810229", kw: "нон стоп non stop енергетик энергетик 250мл 500мл" },
+            { id: "ua39", cat: "🇺🇦 Супермаркети UA", name: "Енергетичний напій «NON STOP» Original / Jungle", cal: 46, p: 0, f: 0, c: 11.2, packGrams: 500, barcode: "4820097810113", kw: "нон стоп non stop original jungle енергетик" },
+            { id: "ua40", cat: "🇺🇦 Супермаркети UA", name: "Напій «Живчик» з соком яблука (Оболонь)", cal: 38, p: 0, f: 0, c: 9.5, packGrams: 330, barcode: "4820000410553", kw: "живчик оболонь вода напій" },
+
+            // 🍲 Готові страви та кулінарія (Українська кухня, Сільпо Кулінарія, домашні страви)
+            { id: "f1", cat: "Готовые стравы", name: "Борщ український з яловичиною/куркою (Борщ украинский)", cal: 65, p: 4.5, f: 2.8, c: 5.6, packGrams: 350, kw: "борщ український суп перше", fav: true },
+            { id: "f2", cat: "Готовые стравы", name: "Сирники творожні запечені / на пательні (Сырники)", cal: 185, p: 16.5, f: 6.5, c: 14.5, packGrams: 180, kw: "сирники сырники з сиру творога сільпо", fav: true },
+            { id: "f3", cat: "Готовые стравы", name: "Вареники з картоплею (Вареники с картошкой)", cal: 195, p: 5.2, f: 4.5, c: 33.5, packGrams: 220, kw: "вареники з картоплею картошкой" },
+            { id: "f4", cat: "Готовые стравы", name: "Вареники з кисломолочним сиром (Вареники с творогом)", cal: 202, p: 10.5, f: 5.8, c: 26.8, packGrams: 220, kw: "вареники з сиром творогом" },
+            { id: "f5", cat: "Готовые стравы", name: "Вареники з вишнею (Вареники с вишней)", cal: 188, p: 4.6, f: 2.1, c: 37.5, packGrams: 220, kw: "вареники з вишнею" },
+            { id: "f6", cat: "Готовые стравы", name: "Деруни (драники) картопляні", cal: 215, p: 4.2, f: 11.5, c: 24.0, packGrams: 200, kw: "деруни драники картопляні" },
+            { id: "f7", cat: "Готовые стравы", name: "Котлета по-київськи куряча (Котлета по-киевски)", cal: 275, p: 17.8, f: 18.2, c: 9.8, packGrams: 160, kw: "котлета по київськи киевски" },
+            { id: "f8", cat: "Готовые стравы", name: "Котлети курячі/індичі парові (Котлеты куриные)", cal: 138, p: 21.5, f: 4.5, c: 2.8, packGrams: 180, kw: "котлети курячі парові фітнес", fav: true },
+            { id: "f9", cat: "Готовые стравы", name: "Голубці з м'ясом та рисом (Голубцы)", cal: 135, p: 8.6, f: 6.8, c: 9.5, packGrams: 250, kw: "голубці голубцы" },
+            { id: "f10", cat: "Готовые стравы", name: "Плов з куркою / індичкою (Плов с курицей)", cal: 165, p: 11.2, f: 5.4, c: 18.5, packGrams: 250, kw: "плов з куркою рис" },
+            { id: "f11", cat: "Готовые стравы", name: "Плов узбецький з яловичиною", cal: 210, p: 10.5, f: 10.2, c: 19.4, packGrams: 250, kw: "плов з яловичиною говядиной" },
+            { id: "f12", cat: "Готовые стравы", name: "Гречка по-купецьки з куркою та овочами", cal: 132, p: 11.8, f: 3.6, c: 13.5, packGrams: 250, kw: "гречка по купецьки з куркою", fav: true },
+            { id: "f13", cat: "Готовые стравы", name: "Вівсяномлинець з яйцем та сиром (Овсяноблин)", cal: 192, p: 13.4, f: 8.2, c: 16.5, packGrams: 180, kw: "вівсяномлинець овсяноблин сніданок", fav: true },
+            { id: "f14", cat: "Готовые стравы", name: "Омлет з 3 яєць з молоком та зеленню", cal: 154, p: 11.8, f: 11.2, c: 1.9, packGrams: 200, kw: "омлет яйця яичница" },
+            { id: "f15", cat: "Готовые стравы", name: "Яєчня оката з беконом (Яичница с беконом)", cal: 235, p: 14.5, f: 19.0, c: 1.2, packGrams: 180, kw: "яєчня яичница глазунья" },
+            { id: "f16", cat: "Готовые стравы", name: "Запіканка сирна ПП без цукру (Творожная запеканка)", cal: 148, p: 17.5, f: 4.8, c: 8.5, packGrams: 200, kw: "запіканка сирна творожная запеканка" },
+            { id: "f17", cat: "Готовые стравы", name: "Шаурма класична з куркою", cal: 215, p: 12.5, f: 10.5, c: 18.2, packGrams: 320, kw: "шаурма кебаб донер" },
+            { id: "f18", cat: "Готовые стравы", name: "Шаурма фітнес домашня (лаваш, філе, йогурт, овочі)", cal: 158, p: 16.2, f: 4.5, c: 13.5, packGrams: 300, kw: "шаурма пп фітнес рол" },
+            { id: "f19", cat: "Готовые стравы", name: "Боул з лососем, рисом та авокадо (Сільпо Кулінарія)", cal: 168, p: 10.8, f: 7.4, c: 15.2, packGrams: 280, kw: "боул поке лосось сільпо", fav: true },
+            { id: "f20", cat: "Готовые стравы", name: "Боул з тунцем, кіноа та свіжими овочами", cal: 142, p: 13.5, f: 4.2, c: 12.8, packGrams: 280, kw: "боул тунець кіноа" },
+            { id: "f21", cat: "Готовые стравы", name: "Салат Цезар з курячим філе", cal: 165, p: 14.2, f: 9.8, c: 5.4, packGrams: 220, kw: "салат цезар цезарь" },
+            { id: "f22", cat: "Готовые стравы", name: "Салат Грецький з фетою та оливками", cal: 115, p: 4.2, f: 8.8, c: 4.5, packGrams: 220, kw: "салат грецький греческий" },
+            { id: "f23", cat: "Готовые стравы", name: "Паста Карбонара", cal: 265, p: 11.5, f: 14.2, c: 23.0, packGrams: 250, kw: "паста карбонара макарони" },
+            { id: "f24", cat: "Готовые стравы", name: "Паста Болоньєзе з м'ясним соусом", cal: 175, p: 9.8, f: 5.8, c: 21.0, packGrams: 250, kw: "паста болоньєзе макарони" },
+            { id: "f25", cat: "Готовые стравы", name: "Суші Рол Філадельфія з лососем", cal: 185, p: 9.2, f: 6.8, c: 22.0, packGrams: 240, kw: "суші рол філадельфія филадельфия" },
+            { id: "f26", cat: "Готовые стравы", name: "Суші Рол Каліфорнія", cal: 176, p: 7.5, f: 5.2, c: 24.5, packGrams: 220, kw: "суші рол каліфорнія" },
+            { id: "f27", cat: "Готовые стравы", name: "Окрошка на кефірі з курячим філе", cal: 68, p: 6.2, f: 2.1, c: 5.8, packGrams: 350, kw: "окрошка суп" },
+            { id: "f28", cat: "Готовые стравы", name: "Курячий бульйон з локшиною та філе", cal: 58, p: 6.5, f: 1.8, c: 4.2, packGrams: 350, kw: "бульйон курячий суп" },
+            { id: "f29", cat: "Готовые стравы", name: "Млинці тонкі з м'ясом або сиром (Блины)", cal: 212, p: 9.4, f: 7.8, c: 26.5, packGrams: 200, kw: "млинці блины налисники" },
+            { id: "f30", cat: "Готовые стравы", name: "Пельмені відварні з яловичиною/свининою", cal: 248, p: 11.8, f: 12.4, c: 22.5, packGrams: 220, kw: "пельмені пельмени" },
+            { id: "f31", cat: "Готовые стравы", name: "Холодець курячий/яловичий пісний", cal: 112, p: 18.5, f: 4.0, c: 0.8, packGrams: 200, kw: "холодець холодец" },
+            { id: "f32", cat: "Готовые стравы", name: "Вінегрет класичний", cal: 92, p: 1.8, f: 4.8, c: 10.5, packGrams: 200, kw: "вінегрет винегрет салат" },
+            { id: "f33", cat: "Готовые стравы", name: "Хумус нутовий класичний («Yofi!» Україна)", cal: 177, p: 7.9, f: 9.6, c: 14.3, packGrams: 100, kw: "хумус yofi йофі нут" },
+
+            // 🥩 Мясо и Птица (М'ясо та Птиця)
+            { id: "m1", cat: "Мясо и Птица", name: "Куряче філе запечене/відварне (Куриное филе грудка)", cal: 165, p: 31.0, f: 3.6, c: 0, packGrams: 200, kw: "курка курица грудка філе филе", fav: true },
+            { id: "m2", cat: "Мясо и Птица", name: "Куряче філе сире (Куриное филе сырое)", cal: 113, p: 23.6, f: 1.9, c: 0, packGrams: 200, kw: "курка курица філе сире" },
+            { id: "m3", cat: "Мясо и Птица", name: "Стегно куряче без шкіри запечене (Бедро куриное)", cal: 185, p: 24.5, f: 9.5, c: 0, packGrams: 180, kw: "стегно бедро курка" },
+            { id: "m4", cat: "Мясо и Птица", name: "Гомілка куряча запечена (Голень куриная)", cal: 172, p: 25.0, f: 7.8, c: 0, packGrams: 180, kw: "гомілка голень курка" },
+            { id: "m5", cat: "Мясо и Птица", name: "Індичка філе на грилі/парі (Филе индейки)", cal: 145, p: 29.0, f: 2.5, c: 0, packGrams: 200, kw: "індичка индейка філе", fav: true },
+            { id: "m6", cat: "Мясо и Птица", name: "Яловичина пісна відварна/гриль (Говядина вырезка)", cal: 187, p: 26.5, f: 8.8, c: 0, packGrams: 180, kw: "яловичина говядина м'ясо" },
+            { id: "m7", cat: "Мясо и Птица", name: "Стейк Рібай яловичий (Стейк Рибай)", cal: 271, p: 24.0, f: 19.0, c: 0, packGrams: 220, kw: "стейк рібай яловичина" },
+            { id: "m8", cat: "Мясо и Птица", name: "Телятина нежирна запечена", cal: 158, p: 27.5, f: 5.2, c: 0, packGrams: 180, kw: "телятина" },
+            { id: "m9", cat: "Мясо и Птица", name: "Свиняча вирізка нежирна гриль (Свиная вырезка)", cal: 195, p: 25.5, f: 10.2, c: 0, packGrams: 180, kw: "свинина вирізка шашлик" },
+            { id: "m10", cat: "Мясо и Птица", name: "Фарш курячий/індичий філейний", cal: 135, p: 21.5, f: 5.0, c: 0, packGrams: 200, kw: "фарш курячий індичий" },
+            { id: "m11", cat: "Мясо и Птица", name: "Печінка куряча тушкована (Печень куриная)", cal: 152, p: 21.0, f: 6.5, c: 1.8, packGrams: 180, kw: "печінка печень куряча" },
+            { id: "m12", cat: "Мясо и Птица", name: "Серце куряче тушковане (Сердце куриное)", cal: 168, p: 19.5, f: 9.8, c: 0.6, packGrams: 180, kw: "серце сердечки курячі" },
+            { id: "m13", cat: "Мясо и Птица", name: "Шинка з індички нежирна (Ветчина из индейки)", cal: 118, p: 19.0, f: 4.0, c: 1.5, packGrams: 100, kw: "шинка ветчина" },
+            { id: "m14", cat: "Мясо и Птица", name: "Сало українське свіже / солоне", cal: 797, p: 2.4, f: 89.0, c: 0, packGrams: 40, kw: "сало українське" },
+
+            // 🐟 Рыба и Морепродукты (Риба та Морепродукти)
+            { id: "r1", cat: "Рыба и Морепродукты", name: "Лосось / Сьомга слабосолена або гриль (Семга)", cal: 202, p: 21.5, f: 13.0, c: 0, packGrams: 150, kw: "лосось сьомга семга риба", fav: true },
+            { id: "r2", cat: "Рыба и Морепродукты", name: "Тунець консервований у власному соку (Тунец)", cal: 105, p: 24.0, f: 1.0, c: 0, packGrams: 140, kw: "тунець тунец консерва", fav: true },
+            { id: "r3", cat: "Рыба и Морепродукты", name: "Хек / Мінтай запечений або відварний", cal: 96, p: 19.5, f: 1.8, c: 0, packGrams: 200, kw: "хек мінтай минтай риба біла" },
+            { id: "r4", cat: "Рыба и Морепродукты", name: "Дорадо / Сібас на грилі", cal: 135, p: 21.0, f: 5.5, c: 0, packGrams: 200, kw: "дорадо сібас риба" },
+            { id: "r5", cat: "Рыба и Морепродукты", name: "Скумбрія запечена (Скумбрия)", cal: 215, p: 19.0, f: 15.5, c: 0, packGrams: 180, kw: "скумбрія скумбрия риба" },
+            { id: "r6", cat: "Рыба и Морепродукты", name: "Креветки королівські відварні", cal: 98, p: 21.5, f: 1.2, c: 0, packGrams: 150, kw: "креветки морепродукти" },
+            { id: "r7", cat: "Рыба и Морепродукты", name: "Кальмар філе відварний", cal: 102, p: 19.8, f: 2.0, c: 1.0, packGrams: 150, kw: "кальмар морепродукти" },
+            { id: "r8", cat: "Рыба и Морепродукты", name: "Оселедець слабосолений філе (Сельдь)", cal: 210, p: 18.0, f: 15.2, c: 0, packGrams: 100, kw: "оселедець сельдь селедка" },
+            { id: "r9", cat: "Рыба и Морепродукты", name: "Форель райдужна запечена", cal: 168, p: 20.8, f: 9.2, c: 0, packGrams: 180, kw: "форель риба" },
+            { id: "r10", cat: "Рыба и Морепродукты", name: "Ікра червона лососева", cal: 249, p: 31.5, f: 13.2, c: 1.0, packGrams: 50, kw: "ікра икра червона" },
+
+            // 🍚 Крупы, Гарниры и Хлеб (Крупи, Гарніри та Хліб)
+            { id: "g1", cat: "Крупы и Гарниры", name: "Гречка відварна готова (Гречка отварная)", cal: 110, p: 4.2, f: 1.1, c: 21.3, packGrams: 200, kw: "гречка гречана каша гарнір", fav: true },
+            { id: "g2", cat: "Крупы и Гарниры", name: "Гречана крупа суха (Гречка сухая)", cal: 335, p: 12.6, f: 3.3, c: 64.0, packGrams: 80, kw: "гречка суха крупа" },
+            { id: "g3", cat: "Крупы и Гарниры", name: "Рис басматі / жасмин відварний (Рис отварной)", cal: 130, p: 2.7, f: 0.3, c: 28.0, packGrams: 200, kw: "рис басматі жасмин відварний", fav: true },
+            { id: "g4", cat: "Крупы и Гарниры", name: "Рис бурий/дикий відварний", cal: 112, p: 2.6, f: 0.9, c: 23.5, packGrams: 200, kw: "рис бурий нешліфований" },
+            { id: "g5", cat: "Крупы и Гарниры", name: "Вівсяні пластівці Геркулес сухі (Овсянка сухая)", cal: 366, p: 12.5, f: 6.2, c: 61.0, packGrams: 70, kw: "вівсянка овсянка геркулес пластівці", fav: true },
+            { id: "g6", cat: "Крупы и Гарниры", name: "Вівсяна каша на воді (Овсянка на воде)", cal: 88, p: 3.0, f: 1.7, c: 15.0, packGrams: 250, kw: "вівсянка овсяная каша на воді" },
+            { id: "g7", cat: "Крупы и Гарниры", name: "Вівсяна каша на молоці (Овсянка на молоке)", cal: 118, p: 4.2, f: 3.2, c: 18.5, packGrams: 250, kw: "вівсянка овсяная каша на молоці" },
+            { id: "g8", cat: "Крупы и Гарниры", name: "Булгур відварний (Булгур готовый)", cal: 115, p: 4.1, f: 0.8, c: 22.8, packGrams: 200, kw: "булгур каша" },
+            { id: "g9", cat: "Крупы и Гарниры", name: "Кіноа відварна (Киноа)", cal: 120, p: 4.4, f: 1.9, c: 21.3, packGrams: 180, kw: "кіноа киноа" },
+            { id: "g10", cat: "Крупы и Гарниры", name: "Кускус готовий", cal: 112, p: 3.8, f: 0.2, c: 23.2, packGrams: 200, kw: "кускус" },
+            { id: "g11", cat: "Крупы и Гарниры", name: "Сочевиця червона/зелена відварна (Чечевица)", cal: 116, p: 9.0, f: 0.4, c: 20.0, packGrams: 200, kw: "сочевиця чечевица бобові" },
+            { id: "g12", cat: "Крупы и Гарниры", name: "Макарони / Паста з твердих сортів готова", cal: 138, p: 5.0, f: 0.9, c: 27.5, packGrams: 200, kw: "макарони паста спагеті" },
+            { id: "g13", cat: "Крупы и Гарниры", name: "Картопля відварна / запечена по-селянськи (Картофель)", cal: 86, p: 2.0, f: 0.4, c: 18.5, packGrams: 200, kw: "картопля картофель картошка" },
+            { id: "g14", cat: "Крупы и Гарниры", name: "Картопляне пюре з молоком та маслом", cal: 112, p: 2.2, f: 4.2, c: 16.5, packGrams: 220, kw: "пюре картопляне" },
+            { id: "g15", cat: "Крупы и Гарниры", name: "Батат запечений", cal: 90, p: 2.0, f: 0.2, c: 20.5, packGrams: 200, kw: "батат" },
+            { id: "g16", cat: "Крупы и Гарниры", name: "Хліб цільнозерновий / тостовий «Київхліб»", cal: 245, p: 9.2, f: 3.2, c: 44.5, packGrams: 50, kw: "хліб хлеб тостовий київхліб" },
+            { id: "g17", cat: "Крупы и Гарниры", name: "Хлібці гречані/рисові (1 шт ≈ 10г)", cal: 310, p: 10.0, f: 2.5, c: 62.0, packGrams: 30, kw: "хлібці хлебцы" },
+            { id: "g18", cat: "Крупы и Гарниры", name: "Лаваш вірменський тонкий (Лаваш армянский)", cal: 236, p: 7.9, f: 1.0, c: 48.5, packGrams: 100, kw: "лаваш тортилья" },
+
+            // 🧀 Молочка, Сыры и Яйца (Молочка, Сир кисломолочний та Яйця)
+            { id: "d1", cat: "Молочка и Яйца", name: "Яйця курячі «Ясенсвіт» / «Квочка» (2 шт ≈ 110г)", cal: 155, p: 12.7, f: 11.5, c: 0.7, packGrams: 110, kw: "яйця яйца яйце ясенсвіт квочка", fav: true },
+            { id: "d2", cat: "Молочка и Яйца", name: "Білок яєчний рідкий/відварний (Белок яичный)", cal: 48, p: 11.0, f: 0.2, c: 0.5, packGrams: 150, kw: "білок яєчний белок" },
+            { id: "d3", cat: "Молочка и Яйца", name: "Сир кисломолочний 5% (Творог 5% класичний)", cal: 121, p: 17.2, f: 5.0, c: 1.8, packGrams: 180, kw: "сир кисломолочний творог 5% 180г 200г", fav: true },
+            { id: "d4", cat: "Молочка и Яйца", name: "Сир кисломолочний знежирений 0.5% (Творог 0%)", cal: 85, p: 18.0, f: 0.5, c: 1.8, packGrams: 180, kw: "сир кисломолочний творог 0% нежирний 180г" },
+            { id: "d5", cat: "Молочка и Яйца", name: "Сир кисломолочний домашній 9% (Творог 9%)", cal: 159, p: 16.7, f: 9.0, c: 2.0, packGrams: 180, kw: "сир кисломолочний творог 9% домашній 180г" },
+            { id: "d6", cat: "Молочка и Яйца", name: "Грецький йогурт густий 2% без цукру (Греческий йогурт)", cal: 68, p: 9.5, f: 2.0, c: 3.2, packGrams: 200, kw: "йогурт грецький греческий галичина молокія", fav: true },
+            { id: "d7", cat: "Молочка и Яйца", name: "Кефір 1% / 2.5% (Кефир)", cal: 50, p: 3.0, f: 2.5, c: 4.0, packGrams: 250, kw: "кефір кефир" },
+            { id: "d8", cat: "Молочка и Яйца", name: "Молоко 2.5%", cal: 53, p: 2.8, f: 2.5, c: 4.7, packGrams: 200, kw: "молоко" },
+            { id: "d9", cat: "Молочка и Яйца", name: "Молоко рослинне «Ідеаль Немолоко» / Alpro (вівсяне/мигдальне)", cal: 45, p: 1.0, f: 1.5, c: 6.5, packGrams: 200, kw: "немолоко рослинне молоко мигдальне вівсяне" },
+            { id: "d10", cat: "Молочка и Яйца", name: "Сир твердий Гауда / Голландський 45% (Сыр твердый)", cal: 352, p: 25.0, f: 27.5, c: 0, packGrams: 50, kw: "сир твердий сыр голландський гауда" },
+            { id: "d11", cat: "Молочка и Яйца", name: "Моцарелла розсільна", cal: 245, p: 18.5, f: 18.5, c: 1.0, packGrams: 100, kw: "моцарелла сир" },
+            { id: "d12", cat: "Молочка и Яйца", name: "Сир Сулугуні", cal: 285, p: 20.5, f: 22.0, c: 0.5, packGrams: 80, kw: "сулугуні сир" },
+            { id: "d13", cat: "Молочка и Яйца", name: "Сир Фета / Бринза", cal: 264, p: 14.2, f: 21.3, c: 3.5, packGrams: 80, kw: "фета бринза сир" },
+            { id: "d14", cat: "Молочка и Яйца", name: "Сметана 15%", cal: 158, p: 2.6, f: 15.0, c: 3.2, packGrams: 50, kw: "сметана" },
+            { id: "d15", cat: "Молочка и Яйца", name: "Масло вершкове 82.5% «Селянське» / «Ферма»", cal: 748, p: 0.6, f: 82.5, c: 0.8, packGrams: 20, kw: "масло вершкове сливочное" },
+
+            // 🥑 Овощи, Фрукты, Орехи и Масла (Овочі, Фрукти та Горіхи)
+            { id: "v1", cat: "Овощи и Фрукты", name: "Банан очищений (1 шт ≈ 120г)", cal: 95, p: 1.5, f: 0.2, c: 21.8, packGrams: 120, kw: "банан фрукти", fav: true },
+            { id: "v2", cat: "Овощи и Фрукты", name: "Яблуко свіже Українське (Яблоко)", cal: 47, p: 0.4, f: 0.4, c: 10.8, packGrams: 180, kw: "яблуко яблоко" },
+            { id: "v3", cat: "Овощи и Фрукты", name: "Авокадо Хасс стигле", cal: 160, p: 2.0, f: 14.7, c: 1.8, packGrams: 100, kw: "авокадо хасс", fav: true },
+            { id: "v4", cat: "Овощи и Фрукты", name: "Апельсин / Мандарин", cal: 43, p: 0.9, f: 0.2, c: 8.5, packGrams: 150, kw: "апельсин мандарин цитрус" },
+            { id: "v5", cat: "Овощи и Фрукты", name: "Ківі (Киви)", cal: 48, p: 1.0, f: 0.5, c: 10.2, packGrams: 100, kw: "ківі киви" },
+            { id: "v6", cat: "Овощи и Фрукты", name: "Лохина / Полуниця / Малина (Голубика / Клубника)", cal: 42, p: 0.8, f: 0.4, c: 8.2, packGrams: 150, kw: "лохина полуниця малина ягоди голубика клубника" },
+            { id: "v7", cat: "Овощи и Фрукты", name: "Огірки свіжі (Огурцы)", cal: 15, p: 0.7, f: 0.1, c: 2.8, packGrams: 150, kw: "огірки огурцы овочі" },
+            { id: "v8", cat: "Овощи и Фрукты", name: "Помідори / Чері свіжі (Помидоры)", cal: 20, p: 0.9, f: 0.2, c: 3.8, packGrams: 150, kw: "помідори томати помидоры чері" },
+            { id: "v9", cat: "Овощи и Фрукты", name: "Перець болгарський солодкий", cal: 27, p: 1.3, f: 0.1, c: 5.3, packGrams: 120, kw: "перець болгарський" },
+            { id: "v10", cat: "Овощи и Фрукты", name: "Броколі / Цвітна капуста на парі", cal: 34, p: 2.8, f: 0.4, c: 5.2, packGrams: 150, kw: "броколі брокколи капуста" },
+            { id: "v11", cat: "Овощи и Фрукты", name: "Салатний мікс / Шпинат / Рукола", cal: 22, p: 2.5, f: 0.3, c: 2.2, packGrams: 100, kw: "салат шпинат рукола зелень" },
+            { id: "v12", cat: "Овощи и Фрукты", name: "Печериці обсмажені/запечені (Шампиньоны)", cal: 38, p: 4.3, f: 1.5, c: 1.2, packGrams: 150, kw: "печериці гриби шампиньоны" },
+            { id: "v13", cat: "Овощи и Фрукты", name: "Горіхи (Мигдаль / Фундук / Кеш'ю)", cal: 605, p: 20.0, f: 53.0, c: 13.0, packGrams: 30, kw: "горіхи орехи мигдаль фундук кешью" },
+            { id: "v14", cat: "Овощи и Фрукты", name: "Волоські горіхи (Грецкие орехи)", cal: 654, p: 15.2, f: 65.2, c: 7.0, packGrams: 30, kw: "волоські горіхи грецкие орехи" },
+            { id: "v15", cat: "Овощи и Фрукты", name: "Арахісова паста натуральна без цукру", cal: 588, p: 25.0, f: 50.0, c: 12.0, packGrams: 30, kw: "арахісова паста арахисовая том", fav: true },
+            { id: "v16", cat: "Овощи и Фрукты", name: "Олія оливкова / соняшникова (1 ст.л = 10г)", cal: 898, p: 0, f: 99.8, c: 0, packGrams: 10, kw: "олія масло оливкова соняшникова" },
+
+            // ⚡ Спортпит, Батончики и Напитки (Спортхарч, Батончики та Напої)
+            { id: "s1", cat: "Спортпит и Снеки", name: "Сироватковий Протеїн Whey (1 скуп = 30г)", cal: 390, p: 78.0, f: 5.5, c: 7.0, packGrams: 30, kw: "протеїн протеин whey скуп", fav: true },
+            { id: "s2", cat: "Спортпит и Снеки", name: "Ізолят протеїну Whey Isolate (1 скуп = 30г)", cal: 372, p: 86.0, f: 1.2, c: 2.5, packGrams: 30, kw: "ізолят протеїн isolate" },
+            { id: "s3", cat: "Спортпит и Снеки", name: "Казеїновий протеїн нічний (1 скуп = 30г)", cal: 365, p: 76.0, f: 2.5, c: 8.0, packGrams: 30, kw: "казеїн протеїн" },
+            { id: "s4", cat: "Спортпит и Снеки", name: "Протеїновий батончик без цукру (Power Pro / Snaq Fabriq 60г)", cal: 325, p: 33.0, f: 11.0, c: 14.0, packGrams: 60, kw: "батончик протеїновий snaq fabriq power pro", fav: true },
+            { id: "s5", cat: "Спортпит и Снеки", name: "Гейнер високовуглеводний", cal: 385, p: 22.0, f: 3.5, c: 68.0, packGrams: 80, kw: "гейнер" },
+            { id: "s6", cat: "Спортпит и Снеки", name: "Шоколад чорний 75-85% какао (Roshen / Корона / Світоч)", cal: 545, p: 9.2, f: 42.0, c: 31.0, packGrams: 30, kw: "шоколад чорний рошен корона світоч" },
+            { id: "s7", cat: "Спортпит и Снеки", name: "Капучино / Лате на молоці (250 мл)", cal: 46, p: 2.4, f: 2.2, c: 4.1, packGrams: 250, kw: "кава капучино лате латте" },
+            { id: "s8", cat: "Спортпит и Снеки", name: "Мед натуральний квітковий Український", cal: 328, p: 0.8, f: 0, c: 81.5, packGrams: 25, kw: "мед" }
+        ];
+
+        const FOOD_CATEGORIES = [
+            "Все",
+            "🇺🇦 Супермаркети UA",
+            "⭐ Избранное",
+            "Готовые стравы",
+            "Молочка и Яйца",
+            "Мясо и Птица",
+            "Рыба и Морепродукты",
+            "Крупы и Гарниры",
+            "Овощи и Фрукты",
+            "Спортпит и Снеки"
+        ];
+
+        const DAYS_SHORT = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
+        const DAYS_FULL = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье"];
+
+        // =====================================================
+        // DEFAULT APP STATE (Pre-configured Meal & Workout Plan)
+        // =====================================================
+        const DEFAULT_STATE = {
+            xp: 40,
+            streak: 3,
+            selectedDayIdx: (new Date().getDay() + 6) % 7, // 0 = Пн, 6 = Вс
+            goalName: "Рекомпозиция",
+            customFoods: [], // User-created permanent dishes
+            favFoodIds: ["f1", "f2", "f8", "f12", "f13", "f19", "m1", "m5", "r1", "r2", "g1", "g3", "g5", "d1", "d3", "d6", "v1", "v3", "v15", "s1", "s4"],
+            targets: {
+                cal: 2350,
+                p: 175,
+                f: 75,
+                c: 245,
+                water: 2500
+            },
+            today: {
+                water: 500,
+                logs: [] // { id, type: 'food'|'activity', title, cal, p, f, c, sourceId }
+            },
+            mealPlan: [
+                { id: "mp1", slot: "Завтрак", title: "Овсянка (70г) + Протеин (30г) + Банан", cal: 465, p: 34, f: 7, c: 66, done: false },
+                { id: "mp2", slot: "Обед", title: "Куриная грудка (200г) + Гречка (200г) + Овощи", cal: 580, p: 70, f: 10, c: 48, done: false },
+                { id: "mp3", slot: "Перекус", title: "Творог 5% (200г) + Грецкие орехи (25г)", cal: 395, p: 39, f: 23, c: 7, done: false },
+                { id: "mp4", slot: "Ужин", title: "Стейк из индейки (200г) + Рис басмати (180г)", cal: 525, p: 63, f: 6, c: 52, done: false }
+            ],
+            workoutPlan: [
+                {
+                    day: "Пн",
+                    title: "Грудь + Трицепс (База)",
+                    exercises: [
+                        { id: "w1_1", name: "Жим штанги лежа", sets: "4 x 8-10", weight: 75, burn: 110, done: false },
+                        { id: "w1_2", name: "Жим гантелей на наклонной (30°)", sets: "4 x 10-12", weight: 28, burn: 95, done: false },
+                        { id: "w1_3", name: "Отжимания на брусьях с весом", sets: "3 x 12", weight: 10, burn: 85, done: false },
+                        { id: "w1_4", name: "Разгибания на трицепс в кроссовере", sets: "4 x 15", weight: 25, burn: 65, done: false }
+                    ]
+                },
+                {
+                    day: "Вт",
+                    title: "Кардио + Пресс & МФР",
+                    exercises: [
+                        { id: "w2_1", name: "Ходьба в горку (уклон 12%, 5 км/ч)", sets: "35 мин", weight: 0, burn: 310, done: false },
+                        { id: "w2_2", name: "Подъем ног в висе на турнике", sets: "4 x 15", weight: 0, burn: 60, done: false },
+                        { id: "w2_3", name: "Планка с дополнительным контролем", sets: "3 x 60 сек", weight: 0, burn: 45, done: false }
+                    ]
+                },
+                {
+                    day: "Ср",
+                    title: "Спина + Бицепс + Задняя дельта",
+                    exercises: [
+                        { id: "w3_1", name: "Подтягивания широким хватом", sets: "4 x 10-12", weight: 0, burn: 105, done: false },
+                        { id: "w3_2", name: "Тяга штанги в наклоне к поясу", sets: "4 x 10", weight: 70, burn: 115, done: false },
+                        { id: "w3_3", name: "Тяга горизонтального блока", sets: "3 x 12", weight: 65, burn: 85, done: false },
+                        { id: "w3_4", name: "Подъем EZ-штанги на бицепс", sets: "4 x 12", weight: 35, burn: 70, done: false }
+                    ]
+                },
+                {
+                    day: "Чт",
+                    title: "Активное восстановление (Отдых)",
+                    exercises: [
+                        { id: "w4_1", name: "Норма шагов за день (10 000 шагов)", sets: "10к шагов", weight: 0, burn: 320, done: false },
+                        { id: "w4_2", name: "Растяжка и раскатка на ролле (МФР)", sets: "20 мин", weight: 0, burn: 70, done: false }
+                    ]
+                },
+                {
+                    day: "Пт",
+                    title: "Ноги + Плечи (Мощный день)",
+                    exercises: [
+                        { id: "w5_1", name: "Приседания со штангой / Гакк-присед", sets: "4 x 8-10", weight: 95, burn: 150, done: false },
+                        { id: "w5_2", name: "Румынская тяга на бицепс бедра", sets: "4 x 10-12", weight: 80, burn: 120, done: false },
+                        { id: "w5_3", name: "Армейский жим гантелей сидя", sets: "4 x 10-12", weight: 24, burn: 95, done: false },
+                        { id: "w5_4", name: "Махи гантелями в стороны", sets: "4 x 15-20", weight: 12, burn: 75, done: false }
+                    ]
+                },
+                {
+                    day: "Сб",
+                    title: "Функционалка / Fullbody Памп",
+                    exercises: [
+                        { id: "w6_1", name: "Гребной тренажер / Assault Bike", sets: "15 мин HIIT", weight: 0, burn: 220, done: false },
+                        { id: "w6_2", name: "Суперсет: Руки (Бицепс + Трицепс)", sets: "4 x 15", weight: 20, burn: 110, done: false },
+                        { id: "w6_3", name: "Фермерская прогулка с гирями", sets: "4 x 40м", weight: 32, burn: 95, done: false }
+                    ]
+                },
+                {
+                    day: "Вс",
+                    title: "Полный чилл & Восстановление ЦНС",
+                    exercises: [
+                        { id: "w7_1", name: "Прогулка на свежем воздухе", sets: "45 мин", weight: 0, burn: 210, done: false }
+                    ]
+                }
+            ]
+        };
+
+        let state = loadState();
+        let activeCategory = "Все";
+        let selectedFoodItem = INITIAL_FOOD_DB[0];
+        let html5QrScanner = null;
+        let currentScannedProduct = null;
+
+        function loadState() {
+            try {
+                const raw = localStorage.getItem("vibefit_state_v1");
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    if (!parsed.customFoods) parsed.customFoods = [];
+                    if (!parsed.favFoodIds) parsed.favFoodIds = DEFAULT_STATE.favFoodIds;
+                    return parsed;
+                }
+            } catch (e) {
+                console.error("Ошибка чтения localStorage", e);
+            }
+            return JSON.parse(JSON.stringify(DEFAULT_STATE));
+        }
+
+        function saveState() {
+            try {
+                localStorage.setItem("vibefit_state_v1", JSON.stringify(state));
+            } catch (e) {
+                console.error("Ошибка сохранения localStorage", e);
+            }
+        }
+
+        function getAllFoods() {
+            return [...state.customFoods, ...INITIAL_FOOD_DB];
+        }
+
+        // =====================================================
+        // INITIALIZATION & RENDERING
+        // =====================================================
+        function initApp() {
+            selectedFoodItem = getAllFoods()[0];
+            renderCategoryTabs();
+            renderFoodDatabase();
+            updatePresetPreview();
+            populateSettingsInputs();
+            renderAll();
+        }
+
+        function renderAll() {
+            renderHeaderAndXP();
+            renderDashboardSummary();
+            renderMealPlanAndHistory();
+            renderWorkoutsTab();
+            saveState();
+        }
+
+        // Calculate Totals from today.logs
+        function getTodayTotals() {
+            let eatenCal = 0, eatenP = 0, eatenF = 0, eatenC = 0, burnedCal = 0;
+            state.today.logs.forEach(item => {
+                if (item.type === 'food') {
+                    eatenCal += Number(item.cal) || 0;
+                    eatenP += Number(item.p) || 0;
+                    eatenF += Number(item.f) || 0;
+                    eatenC += Number(item.c) || 0;
+                } else if (item.type === 'activity') {
+                    burnedCal += Number(item.cal) || 0;
+                }
+            });
+            return {
+                eatenCal: Math.round(eatenCal),
+                eatenP: Math.round(eatenP),
+                eatenF: Math.round(eatenF),
+                eatenC: Math.round(eatenC),
+                burnedCal: Math.round(burnedCal)
+            };
+        }
+
+        function addXP(amount) {
+            state.xp = Math.max(0, state.xp + amount);
+            renderHeaderAndXP();
+        }
+
+        function renderHeaderAndXP() {
+            const level = Math.floor(state.xp / 100) + 1;
+            const currentLevelXP = state.xp % 100;
+            document.getElementById('userLevelBadge').textContent = `LVL ${level}`;
+            document.getElementById('xpProgressBar').style.width = `${currentLevelXP}%`;
+            document.getElementById('xpText').textContent = `${currentLevelXP} / 100 XP`;
+            document.getElementById('streakCount').textContent = state.streak;
+            document.getElementById('goalBadgeHeader').textContent = state.goalName || "Режим";
+        }
+
+        function renderDashboardSummary() {
+            const totals = getTodayTotals();
+            const t = state.targets;
+
+            // Current Date label
+            const todayIdx = (new Date().getDay() + 6) % 7;
+            document.getElementById('currentDateDisplay').textContent = `${DAYS_FULL[todayIdx]} • Сплит: ${state.workoutPlan[todayIdx].title}`;
+
+            // Calorie Ring math
+            const circumference = 427.25;
+            const pct = Math.min(1.15, totals.eatenCal / Math.max(1, t.cal));
+            const offset = circumference - (Math.min(1, pct) * circumference);
+            const ringEl = document.getElementById('calorieRing');
+            ringEl.style.strokeDashoffset = offset;
+
+            const remaining = t.cal - totals.eatenCal;
+            const remLabel = document.getElementById('calRemainingLabel');
+            const remVal = document.getElementById('calRemainingVal');
+
+            if (remaining >= 0) {
+                remLabel.textContent = "Осталось";
+                remVal.textContent = remaining;
+                remVal.className = "font-mono text-3xl font-extrabold text-white tracking-tight mt-0.5";
+                ringEl.setAttribute('stroke', '#a3e635');
+            } else {
+                remLabel.textContent = "Профицит";
+                remVal.textContent = `+${Math.abs(remaining)}`;
+                remVal.className = "font-mono text-3xl font-extrabold text-neonOrange tracking-tight mt-0.5";
+                ringEl.setAttribute('stroke', '#f97316');
+            }
+
+            document.getElementById('calEatenVal').textContent = totals.eatenCal;
+            document.getElementById('calBurnedVal').textContent = totals.burnedCal;
+            document.getElementById('calTargetVal').textContent = t.cal;
+
+            // Macros Bars
+            document.getElementById('protEaten').textContent = totals.eatenP;
+            document.getElementById('protTarget').textContent = t.p;
+            document.getElementById('protLeft').textContent = `(ост. ${Math.max(0, t.p - totals.eatenP)}г)`;
+            document.getElementById('protBar').style.width = `${Math.min(100, (totals.eatenP / t.p) * 100)}%`;
+
+            document.getElementById('fatEaten').textContent = totals.eatenF;
+            document.getElementById('fatTarget').textContent = t.f;
+            document.getElementById('fatLeft').textContent = `(ост. ${Math.max(0, t.f - totals.eatenF)}г)`;
+            document.getElementById('fatBar').style.width = `${Math.min(100, (totals.eatenF / t.f) * 100)}%`;
+
+            document.getElementById('carbEaten').textContent = totals.eatenC;
+            document.getElementById('carbTarget').textContent = t.c;
+            document.getElementById('carbLeft').textContent = `(ост. ${Math.max(0, t.c - totals.eatenC)}г)`;
+            document.getElementById('carbBar').style.width = `${Math.min(100, (totals.eatenC / t.c) * 100)}%`;
+
+            // Nutrition Header Mini Summary
+            document.getElementById('nutHeaderCal').textContent = `${totals.eatenCal}/${t.cal}`;
+            document.getElementById('nutHeaderP').textContent = `${totals.eatenP}/${t.p}г`;
+            document.getElementById('nutHeaderF').textContent = `${totals.eatenF}/${t.f}г`;
+            document.getElementById('nutHeaderC').textContent = `${totals.eatenC}/${t.c}г`;
+
+            // Water Tracker
+            document.getElementById('waterCurrentVal').textContent = state.today.water;
+            document.getElementById('waterTargetVal').textContent = t.water;
+            document.getElementById('waterBar').style.width = `${Math.min(100, (state.today.water / t.water) * 100)}%`;
+
+            // Today's Workout Preview Card on Dashboard
+            const currentDayPlan = state.workoutPlan[state.selectedDayIdx];
+            const doneCount = currentDayPlan.exercises.filter(e => e.done).length;
+            const totalBurnPlan = currentDayPlan.exercises.reduce((acc, e) => acc + Number(e.burn || 0), 0);
+            document.getElementById('dashWorkoutDayBadge').textContent = DAYS_FULL[state.selectedDayIdx];
+            document.getElementById('dashWorkoutTitle').textContent = currentDayPlan.title;
+            document.getElementById('dashWorkoutProgressText').textContent = `Выполнено ${doneCount} из ${currentDayPlan.exercises.length} упражнений`;
+            document.getElementById('dashWorkoutBurnPreview').textContent = `~${totalBurnPlan} ккал за тренировку`;
+        }
+
+        // =====================================================
+        // MEAL PLAN & HISTORY RENDERING
+        // =====================================================
+        function renderMealPlanAndHistory() {
+            const dashMealContainer = document.getElementById('dashMealPlanList');
+            const fullMealContainer = document.getElementById('fullMealPlanContainer');
+            dashMealContainer.innerHTML = '';
+            fullMealContainer.innerHTML = '';
+
+            state.mealPlan.forEach(meal => {
+                // Dashboard Compact Item
+                const dashItem = document.createElement('div');
+                dashItem.className = `p-3 rounded-2xl border transition flex items-center justify-between gap-3 cursor-pointer ${
+                    meal.done 
+                        ? 'bg-neonLime/10 border-neonLime/40' 
+                        : 'bg-bgElevated/80 border-white/5 hover:border-white/15'
+                }`;
+                dashItem.onclick = () => togglePlannedMeal(meal.id);
+                dashItem.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="w-6 h-6 rounded-lg flex items-center justify-center border ${
+                            meal.done ? 'bg-neonLime border-neonLime text-black' : 'border-gray-500 text-transparent'
+                        }">
+                            <i class="ph-bold ph-check text-xs"></i>
+                        </div>
+                        <div>
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-neonLime block">${meal.slot}</span>
+                            <span class="text-xs font-bold ${meal.done ? 'line-through text-gray-400' : 'text-white'}">${meal.title}</span>
+                        </div>
+                    </div>
+                    <div class="text-right font-mono shrink-0">
+                        <span class="text-xs font-bold text-white block">${meal.cal} ккал</span>
+                        <span class="text-[10px] text-gray-400">Б:${meal.p} Ж:${meal.f} У:${meal.c}</span>
+                    </div>
+                `;
+                dashMealContainer.appendChild(dashItem);
+
+                // Full Nutrition Tab Item with Delete Option
+                const fullItem = document.createElement('div');
+                fullItem.className = `glass-card p-4 rounded-2xl border transition flex items-center justify-between gap-3 ${
+                    meal.done ? 'border-neonLime/40 bg-neonLime/5' : 'border-white/5'
+                }`;
+                fullItem.innerHTML = `
+                    <div class="flex items-center gap-3.5 flex-1 cursor-pointer" onclick="togglePlannedMeal('${meal.id}')">
+                        <div class="w-7 h-7 rounded-xl flex items-center justify-center border transition ${
+                            meal.done ? 'bg-neonLime border-neonLime text-black neon-glow-lime' : 'border-gray-500 text-transparent hover:border-neonLime'
+                        }">
+                            <i class="ph-bold ph-check text-sm"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-white/5 text-neonLime">${meal.slot}</span>
+                                <span class="font-mono text-xs text-gray-400">${meal.cal} ккал</span>
+                            </div>
+                            <h4 class="text-sm font-bold mt-1 ${meal.done ? 'line-through text-gray-400' : 'text-white'}">${meal.title}</h4>
+                            <div class="flex gap-3 mt-1 font-mono text-[11px] text-gray-400">
+                                <span>Белки: <b class="text-neonCyan">${meal.p}г</b></span>
+                                <span>Жиры: <b class="text-neonOrange">${meal.f}г</b></span>
+                                <span>Углеводы: <b class="text-neonLime">${meal.c}г</b></span>
+                            </div>
+                        </div>
+                    </div>
+                    <button onclick="deletePlannedMeal('${meal.id}')" class="p-2 text-gray-500 hover:text-red-400 transition" title="Удалить из плана">
+                        <i class="ph ph-trash text-base"></i>
+                    </button>
+                `;
+                fullMealContainer.appendChild(fullItem);
+            });
+
+            // Render Today's Logged History
+            const histList = document.getElementById('dashHistoryList');
+            document.getElementById('dashLogCount').textContent = `${state.today.logs.length} зап.`;
+            histList.innerHTML = '';
+
+            if (state.today.logs.length === 0) {
+                histList.innerHTML = `
+                    <div class="text-center py-8 text-gray-500 text-xs">
+                        <i class="ph ph-notebook text-2xl block mb-1 mx-auto"></i>
+                        Пока нет записей за сегодня.<br>Отметь блюдо из плана или добавь продукт!
+                    </div>
+                `;
+                return;
+            }
+
+            state.today.logs.slice().reverse().forEach(log => {
+                const row = document.createElement('div');
+                row.className = "bg-bgElevated/70 px-3.5 py-2.5 rounded-xl border border-white/5 flex items-center justify-between gap-2";
+                if (log.type === 'food') {
+                    row.innerHTML = `
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <span class="w-2 h-2 rounded-full bg-neonLime shrink-0"></span>
+                            <div class="truncate">
+                                <span class="text-xs font-semibold text-white block truncate">${log.title}</span>
+                                <span class="text-[10px] font-mono text-gray-400">Б:${log.p}г • Ж:${log.f}г • У:${log.c}г</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 shrink-0">
+                            <span class="font-mono text-xs font-bold text-neonLime">+${log.cal} ккал</span>
+                            <button onclick="removeLogEntry('${log.id}')" class="text-gray-500 hover:text-red-400 p-1">
+                                <i class="ph-bold ph-x text-xs"></i>
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    row.innerHTML = `
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <span class="w-2 h-2 rounded-full bg-neonCyan shrink-0"></span>
+                            <div class="truncate">
+                                <span class="text-xs font-semibold text-white block truncate">${log.title}</span>
+                                <span class="text-[10px] font-mono text-neonCyan">Активность / Тренировка</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 shrink-0">
+                            <span class="font-mono text-xs font-bold text-neonCyan">-${log.cal} ккал</span>
+                            <button onclick="removeLogEntry('${log.id}')" class="text-gray-500 hover:text-red-400 p-1">
+                                <i class="ph-bold ph-x text-xs"></i>
+                            </button>
+                        </div>
+                    `;
+                }
+                histList.appendChild(row);
+            });
+        }
+
+        function togglePlannedMeal(mealId) {
+            const meal = state.mealPlan.find(m => m.id === mealId);
+            if (!meal) return;
+
+            meal.done = !meal.done;
+            if (meal.done) {
+                state.today.logs.push({
+                    id: 'log_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
+                    type: 'food',
+                    title: `[План] ${meal.title}`,
+                    cal: meal.cal,
+                    p: meal.p,
+                    f: meal.f,
+                    c: meal.c,
+                    sourceId: meal.id
+                });
+                addXP(15);
+                showToast(`+${meal.cal} ккал записано (+15 XP)`, 'lime');
+            } else {
+                state.today.logs = state.today.logs.filter(l => l.sourceId !== meal.id);
+                addXP(-15);
+                showToast(`Отметка снята`, 'cyan');
+            }
+            renderAll();
+        }
+
+        function removeLogEntry(logId) {
+            const entry = state.today.logs.find(l => l.id === logId);
+            if (entry && entry.sourceId) {
+                // Uncheck corresponding meal or workout if linked
+                const linkedMeal = state.mealPlan.find(m => m.id === entry.sourceId);
+                if (linkedMeal) linkedMeal.done = false;
+
+                state.workoutPlan.forEach(day => {
+                    const linkedEx = day.exercises.find(e => e.id === entry.sourceId);
+                    if (linkedEx) linkedEx.done = false;
+                });
+            }
+            state.today.logs = state.today.logs.filter(l => l.id !== logId);
+            renderAll();
+        }
+
+        // =====================================================
+        // MASSIVE FOOD & DISHES CATALOG LOGIC
+        // =====================================================
+        function renderCategoryTabs() {
+            const container = document.getElementById('foodCategoryTabs');
+            container.innerHTML = '';
+            FOOD_CATEGORIES.forEach(cat => {
+                const isAct = cat === activeCategory;
+                const btn = document.createElement('button');
+                btn.onclick = () => {
+                    activeCategory = cat;
+                    renderCategoryTabs();
+                    renderFoodDatabase();
+                };
+                btn.className = `px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition shrink-0 border ${
+                    isAct
+                        ? 'bg-neonLime text-black border-neonLime shadow-sm'
+                        : 'bg-bgElevated text-gray-300 border-white/5 hover:border-white/20'
+                }`;
+                btn.textContent = cat;
+                container.appendChild(btn);
+            });
+        }
+
+        function clearFoodSearch() {
+            document.getElementById('foodDbSearchInput').value = '';
+            document.getElementById('autoWeightDetectedBadge')?.classList.add('hidden');
+            renderFoodDatabase();
+        }
+
+        // Smart Ukrainian/Russian query parser:
+        // Extracts gram/ml weight (like "180г", "250 г", "300мл") and normalizes search tokens
+        function parseUkrainianFoodQuery(rawQuery) {
+            let text = (rawQuery || '').toLowerCase().trim();
+            let extractedGrams = null;
+
+            // Match weight tokens like "180г", "180 г", "180g", "250мл", "250 мл"
+            const weightRegex = /(?:^|\s)(\d{2,4})\s*(?:г|гр|грам|грамм|g|мл|ml)(?=\s|$|[.,])/i;
+            const match = text.match(weightRegex);
+            if (match && match[1]) {
+                extractedGrams = parseInt(match[1], 10);
+                text = text.replace(match[0], ' ').trim();
+            }
+
+            // Clean punctuation but keep % (for 5%, 0%, 9%, 2.5%)
+            const cleanText = text.replace(/[,()"'«»]/g, ' ').replace(/\s+/g, ' ').trim();
+            const tokens = cleanText ? cleanText.split(' ').filter(Boolean) : [];
+
+            return {
+                original: rawQuery,
+                cleanQuery: cleanText,
+                tokens,
+                extractedGrams
+            };
+        }
+
+        function quickSearchChip(queryText) {
+            const input = document.getElementById('foodDbSearchInput');
+            input.value = queryText;
+            handleFoodSearchInput(true);
+        }
+
+        function handleFoodSearchInput(autoSelectFirst = false) {
+            const rawVal = document.getElementById('foodDbSearchInput')?.value || '';
+            const parsed = parseUkrainianFoodQuery(rawVal);
+
+            // If user typed a weight like "180г" in "Сир кисломолочний 5% 180г", auto-set portion grams!
+            const badge = document.getElementById('autoWeightDetectedBadge');
+            if (parsed.extractedGrams && parsed.extractedGrams > 0) {
+                document.getElementById('presetGramsInput').value = parsed.extractedGrams;
+                if (badge) {
+                    badge.textContent = `⚡ Авто-вага з пошуку: ${parsed.extractedGrams}г`;
+                    badge.classList.remove('hidden');
+                }
+            } else if (badge) {
+                badge.classList.add('hidden');
+            }
+
+            const matches = renderFoodDatabase(parsed);
+            if (matches && matches.length > 0) {
+                selectedFoodItem = matches[0];
+                if (!parsed.extractedGrams && selectedFoodItem.packGrams && autoSelectFirst) {
+                    document.getElementById('presetGramsInput').value = selectedFoodItem.packGrams;
+                }
+                updatePresetPreview();
+            }
+        }
+
+        function renderFoodDatabase(parsedObj = null) {
+            const rawQuery = document.getElementById('foodDbSearchInput')?.value || '';
+            const parsed = parsedObj || parseUkrainianFoodQuery(rawQuery);
+            const clearBtn = document.getElementById('clearSearchBtn');
+            if (clearBtn) clearBtn.classList.toggle('hidden', !rawQuery.trim());
+
+            const allItems = getAllFoods();
+            document.getElementById('dbCountBadge').textContent = `${allItems.length} поз.`;
+
+            // Synonym expansion for Ukrainian <-> Russian queries
+            const SYNONYMS = {
+                "сир": ["творог", "сыр", "сирок"],
+                "кисломолочний": ["творог", "кисломолочный"],
+                "творог": ["сир", "кисломолочний"],
+                "курка": ["курица", "куряче", "куриное", "філе", "ряба"],
+                "куряче": ["куриное", "філе", "филе"],
+                "вівсянка": ["овсянка", "пластівці", "геркулес"],
+                "яйця": ["яйца", "яйце"],
+                "молоко": ["селянське", "яготинське", "галичина"],
+                "тунець": ["тунец"]
+            };
+
+            const filtered = allItems.filter(item => {
+                // Category check (if user is actively typing a search query, search across ALL categories if current category has no hits)
+                if (activeCategory !== "Все" && !parsed.tokens.length) {
+                    if (activeCategory === "⭐ Избранное" && !state.favFoodIds.includes(item.id)) return false;
+                    if (activeCategory !== "⭐ Избранное" && item.cat !== activeCategory) return false;
+                }
+
+                if (parsed.tokens.length === 0) return true;
+
+                const haystack = `${item.name} ${item.cat} ${item.kw || ''} ${item.barcode || ''}`.toLowerCase();
+
+                // Every token (or its UA/RU synonym) must match in haystack
+                return parsed.tokens.every(tok => {
+                    if (haystack.includes(tok)) return true;
+                    const syns = SYNONYMS[tok] || [];
+                    return syns.some(s => haystack.includes(s));
+                });
+            });
+
+            const grid = document.getElementById('foodDatabaseGrid');
+            grid.innerHTML = '';
+
+            if (filtered.length === 0) {
+                grid.innerHTML = `
+                    <div class="col-span-full text-center py-6 text-gray-400 text-xs space-y-2">
+                        <p>У локальному фільтрі не знайдено «<b>${rawQuery}</b>».</p>
+                        <button onclick="searchOnlineOpenFoodFacts()" class="px-3.5 py-2 rounded-xl bg-neonCyan/20 text-neonCyan border border-neonCyan/40 font-bold">
+                            🌐 Знайти «${parsed.cleanQuery || rawQuery}» в базі супермаркетів України
+                        </button>
+                    </div>
+                `;
+                return [];
+            }
+
+            filtered.forEach(food => {
+                const isSelected = selectedFoodItem && selectedFoodItem.id === food.id;
+                const isFav = state.favFoodIds.includes(food.id);
+                const packBadge = food.packGrams ? `<span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-neonCyan/15 text-neonCyan border border-neonCyan/20">пачка ${food.packGrams}г</span>` : '';
+                const card = document.createElement('div');
+                card.className = `p-3 rounded-2xl border transition cursor-pointer flex items-start justify-between gap-2 ${
+                    isSelected
+                        ? 'bg-neonLime/15 border-neonLime neon-glow-lime'
+                        : 'bg-bgElevated/80 border-white/5 hover:border-white/20'
+                }`;
+                card.onclick = () => selectFoodFromCatalog(food.id);
+                card.innerHTML = `
+                    <div class="min-w-0 flex-1">
+                        <div class="flex flex-wrap items-center gap-1.5">
+                            <span class="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-white/5 text-gray-400">${food.cat}</span>
+                            <span class="font-mono text-[11px] font-bold text-neonLime">${food.cal} ккал</span>
+                            ${packBadge}
+                        </div>
+                        <h5 class="text-xs font-bold text-white mt-1 leading-snug line-clamp-2">${food.name}</h5>
+                        <div class="flex gap-2.5 mt-1 font-mono text-[10px] text-gray-400">
+                            <span>Б:<b class="text-neonCyan">${food.p}</b></span>
+                            <span>Ж:<b class="text-neonOrange">${food.f}</b></span>
+                            <span>У:<b class="text-neonLime">${food.c}</b></span>
+                        </div>
+                    </div>
+                    <button onclick="toggleFavFood(event, '${food.id}')" class="p-1 text-sm ${isFav ? 'text-yellow-400' : 'text-gray-600 hover:text-gray-300'}" title="В обране">
+                        <i class="${isFav ? 'ph-fill' : 'ph'} ph-star"></i>
+                    </button>
+                `;
+                grid.appendChild(card);
+            });
+
+            return filtered;
+        }
+
+        function selectFoodFromCatalog(foodId) {
+            const found = getAllFoods().find(f => f.id === foodId);
+            if (!found) return;
+            selectedFoodItem = found;
+
+            // Check if user already typed a custom weight in the search bar; otherwise use item's standard UA pack weight
+            const rawQuery = document.getElementById('foodDbSearchInput')?.value || '';
+            const parsed = parseUkrainianFoodQuery(rawQuery);
+            if (parsed.extractedGrams) {
+                document.getElementById('presetGramsInput').value = parsed.extractedGrams;
+            } else if (found.packGrams) {
+                document.getElementById('presetGramsInput').value = found.packGrams;
+            }
+
+            updatePresetPreview();
+            renderFoodDatabase(parsed);
+        }
+
+        function setPortionGrams(grams) {
+            const input = document.getElementById('presetGramsInput');
+            if (input) {
+                input.value = grams;
+                updatePresetPreview();
+            }
+        }
+
+        // Ukrainian Market Online Search (ua.openfoodfacts.org + Smart Weight Stripping + UA Supermarket Registry Merge)
+        async function searchOnlineOpenFoodFacts() {
+            const rawQuery = (document.getElementById('foodDbSearchInput').value || '').trim();
+            if (!rawQuery) {
+                showToast("Введи назву продукту або бренду (напр. Сир кисломолочний 5% 180г)!", "cyan");
+                document.getElementById('foodDbSearchInput').focus();
+                return;
+            }
+
+            const parsed = parseUkrainianFoodQuery(rawQuery);
+            const cleanSearchTerm = parsed.cleanQuery || rawQuery;
+
+            // Auto-apply extracted weight (e.g. 180g) right away
+            if (parsed.extractedGrams) {
+                document.getElementById('presetGramsInput').value = parsed.extractedGrams;
+                const badge = document.getElementById('autoWeightDetectedBadge');
+                if (badge) {
+                    badge.textContent = `⚡ Авто-вага з пошуку: ${parsed.extractedGrams}г`;
+                    badge.classList.remove('hidden');
+                }
+            }
+
+            const btn = document.getElementById('onlineSearchBtn');
+            const origText = btn.innerHTML;
+            btn.innerHTML = `<i class="ph-bold ph-spinner animate-spin"></i> Пошук UA...`;
+
+            const container = document.getElementById('onlineSearchResultsContainer');
+            const grid = document.getElementById('onlineFoodGrid');
+            container.classList.remove('hidden');
+            grid.innerHTML = `<div class="col-span-full text-xs text-gray-400 py-3 flex items-center gap-2"><i class="ph-bold ph-spinner animate-spin text-neonCyan"></i> Шукаємо «<b>${cleanSearchTerm}</b>» у базі продуктів України (ua.openfoodfacts.org + АТБ/Сільпо)...</div>`;
+
+            // 1. Gather matching Ukrainian Supermarket items from our verified local UA registry so Ukrainian queries NEVER return empty
+            const localMatches = renderFoodDatabase(parsed) || [];
+            let combinedResults = localMatches.slice(0, 8).map(item => ({
+                id: item.id,
+                cat: "🇺🇦 Реєстр UA",
+                name: item.name,
+                cal: item.cal,
+                p: item.p,
+                f: item.f,
+                c: item.c,
+                packGrams: parsed.extractedGrams || item.packGrams || 180,
+                sourceTag: "🇺🇦 АТБ / Сільпо"
+            }));
+
+            // 2. Query Ukrainian OpenFoodFacts (ua.openfoodfacts.org) using cleaned query without "180г" suffix
+            try {
+                const uaUrl = `https://ua.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(cleanSearchTerm)}&search_simple=1&action=process&json=1&page_size=12`;
+                const res = await fetch(uaUrl);
+                const data = await res.json();
+                const apiProducts = (data.products || []).filter(p => (p.product_name_uk || p.product_name_ru || p.product_name) && p.nutriments);
+
+                apiProducts.forEach((prod, i) => {
+                    const n = prod.nutriments || {};
+                    const cal = Math.round(n['energy-kcal_100g'] || (n['energy_100g'] ? n['energy_100g'] / 4.184 : 0));
+                    const p = Math.round((n.proteins_100g || 0) * 10) / 10;
+                    const f = Math.round((n.fat_100g || 0) * 10) / 10;
+                    const c = Math.round((n.carbohydrates_100g || 0) * 10) / 10;
+                    if (cal === 0 && p === 0 && f === 0 && c === 0) return;
+
+                    const prodTitle = prod.product_name_uk || prod.product_name_ru || prod.product_name;
+                    const brand = prod.brands ? ` «${prod.brands.split(',')[0].trim()}»` : '';
+                    const fullTitle = `${prodTitle}${brand}`;
+
+                    combinedResults.push({
+                        id: 'off_ua_' + Date.now() + '_' + i,
+                        cat: "🇺🇦 OpenFoodFacts UA",
+                        name: fullTitle,
+                        cal, p, f, c,
+                        packGrams: parsed.extractedGrams || 100,
+                        sourceTag: "🌐 OpenFoodFacts UA"
+                    });
+                });
+            } catch (err) {
+                console.warn("UA OpenFoodFacts API fallback to built-in UA Registry:", err);
+            } finally {
+                btn.innerHTML = origText;
+            }
+
+            if (combinedResults.length === 0) {
+                grid.innerHTML = `<div class="col-span-full text-xs text-gray-400 py-3">За запитом «${rawQuery}» точних збігів не знайдено. Спробуй коротшу назву (напр. «Сир 5%», «Галичина», «Яготинське»).</div>`;
+                return;
+            }
+
+            grid.innerHTML = '';
+            combinedResults.forEach((prod) => {
+                const targetGrams = parsed.extractedGrams || prod.packGrams || 100;
+                const r = targetGrams / 100;
+                const portionCal = Math.round(prod.cal * r);
+
+                const div = document.createElement('div');
+                div.className = "p-3 rounded-2xl bg-bgElevated border border-neonCyan/30 hover:border-neonLime cursor-pointer transition flex flex-col justify-between gap-2";
+                div.onclick = () => {
+                    selectedFoodItem = prod;
+                    document.getElementById('presetGramsInput').value = targetGrams;
+                    updatePresetPreview();
+                    showToast(`Обрано: ${prod.name} (${targetGrams}г = ${portionCal} ккал)`, 'lime');
+                };
+                div.innerHTML = `
+                    <div>
+                        <div class="flex items-center justify-between gap-1">
+                            <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-neonCyan/15 text-neonCyan">${prod.sourceTag}</span>
+                            <span class="text-[10px] font-mono text-gray-400">${prod.cal} ккал/100г</span>
+                        </div>
+                        <h5 class="text-xs font-bold text-white mt-1 line-clamp-2">${prod.name}</h5>
+                    </div>
+                    <div class="flex items-center justify-between pt-1.5 border-t border-white/5 font-mono text-[10px]">
+                        <div class="text-gray-300">
+                            Б:<b class="text-neonCyan">${prod.p}</b> Ж:<b class="text-neonOrange">${prod.f}</b> У:<b class="text-neonLime">${prod.c}</b>
+                        </div>
+                        <span class="text-neonLime font-bold">За ${targetGrams}г: ${portionCal} ккал</span>
+                    </div>
+                `;
+                grid.appendChild(div);
+            });
+
+            // Auto-select the top match and calculate for the requested weight (e.g. 180g)
+            selectedFoodItem = combinedResults[0];
+            if (parsed.extractedGrams) {
+                document.getElementById('presetGramsInput').value = parsed.extractedGrams;
+            } else if (combinedResults[0].packGrams) {
+                document.getElementById('presetGramsInput').value = combinedResults[0].packGrams;
+            }
+            updatePresetPreview();
+        }
+
+        function updatePresetPreview() {
+            const food = selectedFoodItem || getAllFoods()[0];
+            const grams = Number(document.getElementById('presetGramsInput')?.value) || 0;
+            const ratio = grams / 100;
+
+            const cal = Math.round(food.cal * ratio);
+            const p = Math.round(food.p * ratio);
+            const f = Math.round(food.f * ratio);
+            const c = Math.round(food.c * ratio);
+
+            document.getElementById('selFoodCatBadge').textContent = food.cat;
+            document.getElementById('selFoodTitle').textContent = food.name;
+            document.getElementById('selFoodBaseInfo').textContent = `${food.cal} ккал (Б:${food.p} Ж:${food.f} У:${food.c})`;
+            document.getElementById('selFoodCalcMacros').innerHTML = `
+                <span class="text-white font-bold">За ${grams}г: <strong class="text-neonLime text-sm">${cal} ккал</strong></span>
+                <span>Белки: <b class="text-neonCyan">${p}г</b></span>
+                <span>Жиры: <b class="text-neonOrange">${f}г</b></span>
+                <span>Углеводы: <b class="text-neonLime">${c}г</b></span>
+            `;
+        }
+
+        function logPresetFood() {
+            const food = selectedFoodItem || getAllFoods()[0];
+            const grams = Number(document.getElementById('presetGramsInput').value) || 100;
+            const ratio = grams / 100;
+
+            const entry = {
+                id: 'log_' + Date.now(),
+                type: 'food',
+                title: `${food.name} (${grams}г)`,
+                cal: Math.round(food.cal * ratio),
+                p: Math.round(food.p * ratio),
+                f: Math.round(food.f * ratio),
+                c: Math.round(food.c * ratio)
+            };
+            state.today.logs.push(entry);
+            addXP(10);
+            showToast(`Добавлено: ${entry.title} (+10 XP)`, 'lime');
+            renderAll();
+        }
+
+        // Online Search via OpenFoodFacts API
+        async function searchOnlineOpenFoodFacts() {
+            const query = (document.getElementById('foodDbSearchInput').value || '').trim();
+            if (!query) {
+                showToast("Введи название продукта или бренда в строку поиска!", "cyan");
+                document.getElementById('foodDbSearchInput').focus();
+                return;
+            }
+
+            const btn = document.getElementById('onlineSearchBtn');
+            const origText = btn.innerHTML;
+            btn.innerHTML = `<i class="ph-bold ph-spinner animate-spin"></i> Поиск...`;
+
+            const container = document.getElementById('onlineSearchResultsContainer');
+            const grid = document.getElementById('onlineFoodGrid');
+            container.classList.remove('hidden');
+            grid.innerHTML = `<div class="col-span-full text-xs text-gray-400 py-3">Загружаем продукты из базы OpenFoodFacts...</div>`;
+
+            try {
+                const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=12`;
+                const res = await fetch(url);
+                const data = await res.json();
+                const products = (data.products || []).filter(p => p.product_name && p.nutriments);
+
+                if (products.length === 0) {
+                    grid.innerHTML = `<div class="col-span-full text-xs text-gray-400 py-3">Ничего не найдено в онлайн-базе по запросу «${query}».</div>`;
+                } else {
+                    grid.innerHTML = '';
+                    products.forEach((prod, i) => {
+                        const n = prod.nutriments || {};
+                        const cal = Math.round(n['energy-kcal_100g'] || (n['energy_100g'] ? n['energy_100g'] / 4.184 : 0));
+                        const p = Math.round((n.proteins_100g || 0) * 10) / 10;
+                        const f = Math.round((n.fat_100g || 0) * 10) / 10;
+                        const c = Math.round((n.carbohydrates_100g || 0) * 10) / 10;
+                        const brand = prod.brands ? ` (${prod.brands.split(',')[0]})` : '';
+                        const fullTitle = `${prod.product_name}${brand}`;
+
+                        const itemObj = {
+                            id: 'off_' + Date.now() + '_' + i,
+                            cat: "Онлайн-база",
+                            name: fullTitle,
+                            cal, p, f, c
+                        };
+
+                        const div = document.createElement('div');
+                        div.className = "p-3 rounded-2xl bg-bgElevated border border-neonCyan/30 hover:border-neonCyan cursor-pointer transition flex flex-col justify-between";
+                        div.onclick = () => {
+                            selectedFoodItem = itemObj;
+                            updatePresetPreview();
+                            showToast(`Выбрано: ${fullTitle}`, 'cyan');
+                        };
+                        div.innerHTML = `
+                            <div>
+                                <span class="text-[10px] font-mono text-neonCyan">${cal} ккал / 100г</span>
+                                <h5 class="text-xs font-bold text-white mt-0.5 line-clamp-2">${fullTitle}</h5>
+                            </div>
+                            <div class="flex gap-2 mt-1.5 font-mono text-[10px] text-gray-400">
+                                <span>Б:${p}</span><span>Ж:${f}</span><span>У:${c}</span>
+                            </div>
+                        `;
+                        grid.appendChild(div);
+                    });
+                }
+            } catch (err) {
+                grid.innerHTML = `<div class="col-span-full text-xs text-red-400 py-2">Не удалось подключиться к OpenFoodFacts. Проверь интернет или используй встроенную базу.</div>`;
+            } finally {
+                btn.innerHTML = origText;
+            }
+        }
+
+        function handleCustomFoodSubmit(e) {
+            e.preventDefault();
+            const name = document.getElementById('customFoodName').value.trim();
+            const cat = document.getElementById('customFoodCat').value;
+            const cal = Number(document.getElementById('customFoodCal').value) || 0;
+            const p = Number(document.getElementById('customFoodP').value) || 0;
+            const f = Number(document.getElementById('customFoodF').value) || 0;
+            const c = Number(document.getElementById('customFoodC').value) || 0;
+            const savePerm = document.getElementById('saveToPermanentDbCheck').checked;
+
+            if (savePerm) {
+                const newDbFood = {
+                    id: 'cust_' + Date.now(),
+                    cat,
+                    name,
+                    cal, p, f, c
+                };
+                state.customFoods.unshift(newDbFood);
+                state.favFoodIds.push(newDbFood.id);
+                selectedFoodItem = newDbFood;
+                renderFoodDatabase();
+                updatePresetPreview();
+            }
+
+            state.today.logs.push({
+                id: 'log_' + Date.now(),
+                type: 'food',
+                title: name,
+                cal, p, f, c
+            });
+            e.target.reset();
+            document.getElementById('saveToPermanentDbCheck').checked = true;
+            addXP(10);
+            showToast(`Записано: ${name} (+10 XP)`, 'lime');
+            renderAll();
+        }
+
+        // =====================================================
+        // QR & BARCODE FOOD SCANNER (UKRAINIAN 482... EAN-13 + OPENFOODFACTS UA)
+        // =====================================================
+        const LOCAL_BARCODE_FALLBACKS = {
+            "4820000191254": { name: "Сир кисломолочний «Яготинське» 5% (180г)", brand: "Яготинське 🇺🇦", cal: 121, p: 18.0, f: 5.0, c: 1.8, defaultGrams: 180 },
+            "4820000191261": { name: "Сир кисломолочний «Яготинське» 0% (180г)", brand: "Яготинське 🇺🇦", cal: 85, p: 18.5, f: 0.2, c: 1.8, defaultGrams: 180 },
+            "4820195291043": { name: "Сир кисломолочний «Своя Лінія» 5% (АТБ, 180г)", brand: "Своя Лінія (АТБ) 🇺🇦", cal: 121, p: 17.5, f: 5.0, c: 1.8, defaultGrams: 180 },
+            "4820003685415": { name: "Йогурт густий «Галичина» Карпатський 2.2% (280г)", brand: "Галичина 🇺🇦", cal: 62, p: 4.5, f: 2.2, c: 6.0, defaultGrams: 280 },
+            "4820011254887": { name: "Йогурт високобілковий «Молокія» White Power (250г)", brand: "Молокія 🇺🇦", cal: 74, p: 8.2, f: 1.5, c: 6.8, defaultGrams: 250 },
+            "4820049670116": { name: "Філе куряче «Наша Ряба» Апетитне", brand: "Наша Ряба 🇺🇦", cal: 165, p: 31.0, f: 3.6, c: 0, defaultGrams: 200 },
+            "4820186820122": { name: "Батончик протеїновий «Power Pro» 36% без цукру (60г)", brand: "Power Pro 🇺🇦", cal: 318, p: 36.0, f: 9.5, c: 12.0, defaultGrams: 60 },
+            "4820245110089": { name: "Батончик протеїновий «FIZI» Protein Bar (45г)", brand: "FIZI 🇺🇦", cal: 395, p: 28.0, f: 18.0, c: 26.0, defaultGrams: 45 },
+            "4820195294013": { name: "Тунець у власному соку «Своя Лінія» (АТБ)", brand: "Своя Лінія 🇺🇦", cal: 104, p: 24.0, f: 0.9, c: 0, defaultGrams: 140 },
+            "4820097810229": { name: "Енергетичний напій «NON STOP» Ultra Zero Sugar", brand: "Non Stop 🇺🇦", cal: 2, p: 0, f: 0, c: 0.4, defaultGrams: 500 },
+            "3017620422003": { name: "Паста горіхова Nutella з какао", brand: "Ferrero", cal: 539, p: 6.3, f: 30.9, c: 57.5, defaultGrams: 30 },
+            "5000159461122": { name: "Батончик Snickers з арахісом", brand: "Mars", cal: 488, p: 8.6, f: 22.8, c: 60.5, defaultGrams: 50 },
+            "5449000131805": { name: "Напій Coca-Cola Zero Sugar", brand: "Coca-Cola", cal: 0, p: 0, f: 0, c: 0, defaultGrams: 330 }
+        };
+
+        function openScannerModal() {
+            document.getElementById('modalScanner').classList.remove('hidden');
+            document.getElementById('modalScanner').classList.add('flex');
+        }
+
+        function closeScannerModal() {
+            stopCameraScanner();
+            document.getElementById('modalScanner').classList.add('hidden');
+            document.getElementById('modalScanner').classList.remove('flex');
+        }
+
+        function startCameraScanner() {
+            const placeholder = document.getElementById('scannerPlaceholder');
+            const stopBtn = document.getElementById('stopCamBtn');
+            placeholder.classList.add('hidden');
+            stopBtn.classList.remove('hidden');
+
+            if (!html5QrScanner) {
+                html5QrScanner = new Html5Qrcode("qrReaderViewport");
+            }
+
+            html5QrScanner.start(
+                { facingMode: "environment" },
+                { fps: 10, qrbox: { width: 240, height: 150 } },
+                (decodedText) => {
+                    stopCameraScanner();
+                    handleDecodedCode(decodedText);
+                },
+                () => {}
+            ).catch(err => {
+                console.warn("Camera start error:", err);
+                stopCameraScanner();
+                showToast("Камера недоступна — используй фото или ввод кода ниже", "cyan");
+            });
+        }
+
+        function stopCameraScanner() {
+            const placeholder = document.getElementById('scannerPlaceholder');
+            const stopBtn = document.getElementById('stopCamBtn');
+            placeholder.classList.remove('hidden');
+            stopBtn.classList.add('hidden');
+
+            if (html5QrScanner && html5QrScanner.isScanning) {
+                html5QrScanner.stop().catch(() => {});
+            }
+        }
+
+        function scanBarcodeFromFile(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            if (!html5QrScanner) {
+                html5QrScanner = new Html5Qrcode("qrReaderViewport");
+            }
+            html5QrScanner.scanFile(file, true)
+                .then(decodedText => handleDecodedCode(decodedText))
+                .catch(() => showToast("Не удалось распознать QR/штрих-код на фото", "cyan"));
+        }
+
+        function handleDecodedCode(rawText) {
+            if (!rawText) return;
+            const trimmed = rawText.trim();
+
+            // Check if it's a VIBE.FIT custom JSON QR code
+            try {
+                if (trimmed.startsWith('{')) {
+                    const obj = JSON.parse(trimmed);
+                    if (obj.name && obj.cal !== undefined) {
+                        displayScannedProduct({
+                            name: obj.name,
+                            brand: "VIBE-QR Страва",
+                            cal: Number(obj.cal) || 0,
+                            p: Number(obj.p) || 0,
+                            f: Number(obj.f) || 0,
+                            c: Number(obj.c) || 0,
+                            img: "https://placehold.co/80x80/1a1a26/a3e635?text=QR"
+                        });
+                        showToast(`QR стравы распознан: ${obj.name}!`, 'lime');
+                        return;
+                    }
+                }
+            } catch (err) {}
+
+            // Otherwise treat as EAN/UPC product barcode
+            document.getElementById('manualBarcodeInput').value = trimmed;
+            lookupBarcode(trimmed);
+        }
+
+        async function lookupBarcode(code) {
+            const clean = (code || '').trim();
+            if (!clean) {
+                showToast("Введи або відскануй штрих-код (напр. 482...)", "cyan");
+                return;
+            }
+
+            document.getElementById('manualBarcodeInput').value = clean;
+            showToast(`Шукаємо штрих-код ${clean}...`, "cyan");
+
+            // 1. Check built-in Ukrainian 482... Barcode Registry first for instant 0ms response on popular UA items
+            if (LOCAL_BARCODE_FALLBACKS[clean]) {
+                const fb = LOCAL_BARCODE_FALLBACKS[clean];
+                displayScannedProduct({
+                    ...fb,
+                    img: "https://placehold.co/80x80/1a1a26/a3e635?text=UA+482"
+                });
+                return;
+            }
+
+            // Also check INITIAL_FOOD_DB items with barcode property
+            const dbMatch = getAllFoods().find(f => f.barcode === clean);
+            if (dbMatch) {
+                displayScannedProduct({
+                    name: dbMatch.name,
+                    brand: dbMatch.cat,
+                    cal: dbMatch.cal,
+                    p: dbMatch.p,
+                    f: dbMatch.f,
+                    c: dbMatch.c,
+                    defaultGrams: dbMatch.packGrams || 100,
+                    img: "https://placehold.co/80x80/1a1a26/a3e635?text=UA+482"
+                });
+                return;
+            }
+
+            // 2. Query Ukrainian OpenFoodFacts API (ua.openfoodfacts.org)
+            try {
+                const res = await fetch(`https://ua.openfoodfacts.org/api/v2/product/${encodeURIComponent(clean)}.json`);
+                const data = await res.json();
+
+                if (data && data.status === 1 && data.product) {
+                    const prod = data.product;
+                    const n = prod.nutriments || {};
+                    const cal = Math.round(n['energy-kcal_100g'] || (n['energy_100g'] ? n['energy_100g'] / 4.184 : 0));
+                    const p = Math.round((n.proteins_100g || 0) * 10) / 10;
+                    const f = Math.round((n.fat_100g || 0) * 10) / 10;
+                    const c = Math.round((n.carbohydrates_100g || 0) * 10) / 10;
+
+                    displayScannedProduct({
+                        name: prod.product_name_uk || prod.product_name_ru || prod.product_name || `Продукт #${clean}`,
+                        brand: prod.brands || "OpenFoodFacts UA",
+                        cal, p, f, c,
+                        defaultGrams: parseInt(prod.product_quantity, 10) || 100,
+                        img: prod.image_front_small_url || "https://placehold.co/80x80/1a1a26/a3e635?text=EAN"
+                    });
+                    return;
+                }
+            } catch (e) {
+                console.warn("UA OpenFoodFacts lookup error:", e);
+            }
+
+            showToast("Товар не знайдено за штрих-кодом — додай його через форму «Своя страва»!", "cyan");
+        }
+
+        function simulateCustomDishQR() {
+            const sampleQR = JSON.stringify({
+                vibe: 1,
+                name: "Домашній Український Борщ з яловичиною та сметаною",
+                cal: 78,
+                p: 5.2,
+                f: 3.6,
+                c: 6.1
+            });
+            handleDecodedCode(sampleQR);
+        }
+
+        function displayScannedProduct(prod) {
+            currentScannedProduct = prod;
+            document.getElementById('scannedProductCard').classList.remove('hidden');
+            document.getElementById('scanResBrand').textContent = prod.brand || "Продукт UA";
+            document.getElementById('scanResName').textContent = prod.name;
+            document.getElementById('scanResPer100').textContent = `На 100г: ${prod.cal} ккал (Б:${prod.p}г • Ж:${prod.f}г • У:${prod.c}г)`;
+            document.getElementById('scanResImg').src = prod.img || "https://placehold.co/80x80/1a1a26/a3e635?text=FOOD";
+            document.getElementById('scanResGrams').value = prod.defaultGrams || 100;
+            updateScannedPreview();
+        }
+
+        function updateScannedPreview() {
+            if (!currentScannedProduct) return;
+            const grams = Number(document.getElementById('scanResGrams').value) || 100;
+            const r = grams / 100;
+            const cal = Math.round(currentScannedProduct.cal * r);
+            const p = Math.round(currentScannedProduct.p * r);
+            const f = Math.round(currentScannedProduct.f * r);
+            const c = Math.round(currentScannedProduct.c * r);
+            document.getElementById('scanResCalcLine').textContent = `Будет записано за ${grams}г: ${cal} ккал | Б: ${p}г | Ж: ${f}г | У: ${c}г`;
+        }
+
+        function confirmAddScannedProduct() {
+            if (!currentScannedProduct) return;
+            const grams = Number(document.getElementById('scanResGrams').value) || 100;
+            const r = grams / 100;
+
+            const entry = {
+                id: 'log_' + Date.now(),
+                type: 'food',
+                title: `[Скан] ${currentScannedProduct.name} (${grams}г)`,
+                cal: Math.round(currentScannedProduct.cal * r),
+                p: Math.round(currentScannedProduct.p * r),
+                f: Math.round(currentScannedProduct.f * r),
+                c: Math.round(currentScannedProduct.c * r)
+            };
+
+            state.today.logs.push(entry);
+            addXP(15);
+            showToast(`Отсканировано и добавлено: +${entry.cal} ккал (+15 XP)`, 'lime');
+            closeScannerModal();
+            renderAll();
+        }
+
+        // QR Generator for Custom Dishes
+        function openQrGeneratorModal() {
+            document.getElementById('modalQrGenerator').classList.remove('hidden');
+            document.getElementById('modalQrGenerator').classList.add('flex');
+            generateDishQRCode();
+        }
+
+        function generateDishQRCode() {
+            const payload = {
+                vibe: 1,
+                name: document.getElementById('qrGenTitle').value.trim() || "Моя Страва",
+                cal: Number(document.getElementById('qrGenCal').value) || 0,
+                p: Number(document.getElementById('qrGenP').value) || 0,
+                f: Number(document.getElementById('qrGenF').value) || 0,
+                c: Number(document.getElementById('qrGenC').value) || 0
+            };
+            const encoded = encodeURIComponent(JSON.stringify(payload));
+            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encoded}`;
+            document.getElementById('qrGenImage').src = qrUrl;
+            document.getElementById('qrGenCaption').textContent = `${payload.name} (${payload.cal} ккал/100г)`;
+            document.getElementById('qrGenOutputBox').classList.remove('hidden');
+        }
+
+        // =====================================================
+        // WORKOUT SCHEDULE & EXERCISES
+        // =====================================================
+        function renderWorkoutsTab() {
+            const selector = document.getElementById('weekDaySelector');
+            selector.innerHTML = '';
+
+            state.workoutPlan.forEach((dayObj, idx) => {
+                const isSelected = idx === state.selectedDayIdx;
+                const allDone = dayObj.exercises.length > 0 && dayObj.exercises.every(e => e.done);
+                const btn = document.createElement('button');
+                btn.onclick = () => {
+                    state.selectedDayIdx = idx;
+                    renderAll();
+                };
+                btn.className = `py-2.5 px-1 rounded-2xl border text-center transition flex flex-col items-center justify-center relative ${
+                    isSelected
+                        ? 'bg-neonCyan text-black border-neonCyan font-extrabold neon-glow-cyan'
+                        : 'bg-bgElevated/80 text-gray-300 border-white/5 hover:border-white/20'
+                }`;
+                btn.innerHTML = `
+                    <span class="text-xs font-bold">${dayObj.day}</span>
+                    <span class="text-[9px] mt-0.5 opacity-80 truncate max-w-[90%]">${dayObj.exercises.length} упр.</span>
+                    ${allDone ? '<span class="w-2 h-2 rounded-full bg-neonLime absolute top-1.5 right-1.5"></span>' : ''}
+                `;
+                selector.appendChild(btn);
+            });
+
+            const currentDay = state.workoutPlan[state.selectedDayIdx];
+            document.getElementById('selectedDayLabel').textContent = DAYS_FULL[state.selectedDayIdx];
+            document.getElementById('selectedDaySplitTitle').textContent = currentDay.title;
+
+            const container = document.getElementById('workoutExercisesContainer');
+            container.innerHTML = '';
+
+            currentDay.exercises.forEach(ex => {
+                const card = document.createElement('div');
+                card.className = `glass-card p-4 rounded-2xl border transition flex flex-wrap sm:flex-nowrap items-center justify-between gap-3 ${
+                    ex.done ? 'border-neonCyan/50 bg-neonCyan/5' : 'border-white/5'
+                }`;
+                card.innerHTML = `
+                    <div class="flex items-center gap-3.5 flex-1 cursor-pointer" onclick="toggleExerciseDone('${ex.id}')">
+                        <div class="w-7 h-7 rounded-xl flex items-center justify-center border transition shrink-0 ${
+                            ex.done ? 'bg-neonCyan border-neonCyan text-black neon-glow-cyan' : 'border-gray-500 text-transparent hover:border-neonCyan'
+                        }">
+                            <i class="ph-bold ph-check text-sm"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-sm font-bold ${ex.done ? 'line-through text-gray-400' : 'text-white'}">${ex.name}</h4>
+                            <div class="flex items-center gap-3 mt-1 font-mono text-xs text-gray-400">
+                                <span class="text-neonPurple font-semibold">${ex.sets}</span>
+                                <span>•</span>
+                                <span class="text-neonCyan">-${ex.burn} ккал</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2 ml-auto">
+                        <div class="bg-bgElevated px-2.5 py-1.5 rounded-xl border border-white/10 flex items-center gap-1.5">
+                            <span class="text-[10px] text-gray-400">Вес:</span>
+                            <input type="number" value="${ex.weight}" onchange="updateExerciseWeight('${ex.id}', this.value)" 
+                                class="w-12 bg-transparent font-mono font-bold text-xs text-white text-center focus:outline-none border-b border-white/20 focus:border-neonCyan">
+                            <span class="text-[10px] text-gray-400 font-mono">кг</span>
+                        </div>
+                        <button onclick="deleteExercise('${ex.id}')" class="p-2 text-gray-500 hover:text-red-400 transition">
+                            <i class="ph ph-trash text-base"></i>
+                        </button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function toggleExerciseDone(exId) {
+            const day = state.workoutPlan[state.selectedDayIdx];
+            const ex = day.exercises.find(e => e.id === exId);
+            if (!ex) return;
+
+            ex.done = !ex.done;
+            if (ex.done) {
+                state.today.logs.push({
+                    id: 'log_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
+                    type: 'activity',
+                    title: `[Тренировка] ${ex.name} (${ex.sets})`,
+                    cal: ex.burn,
+                    sourceId: ex.id
+                });
+                addXP(20);
+                showToast(`Выполнено! -${ex.burn} ккал (+20 XP)`, 'cyan');
+            } else {
+                state.today.logs = state.today.logs.filter(l => l.sourceId !== ex.id);
+                addXP(-20);
+                showToast(`Отметка упражнения снята`, 'cyan');
+            }
+            renderAll();
+        }
+
+        function updateExerciseWeight(exId, newWeight) {
+            const day = state.workoutPlan[state.selectedDayIdx];
+            const ex = day.exercises.find(e => e.id === exId);
+            if (ex) {
+                ex.weight = Number(newWeight) || 0;
+                saveState();
+                showToast(`Рабочий вес сохранен: ${ex.weight} кг`, 'cyan');
+            }
+        }
+
+        function deleteExercise(exId) {
+            const day = state.workoutPlan[state.selectedDayIdx];
+            day.exercises = day.exercises.filter(e => e.id !== exId);
+            renderAll();
+        }
+
+        function editDaySplitTitle() {
+            const day = state.workoutPlan[state.selectedDayIdx];
+            const nextTitle = prompt("Новое название тренировочного дня:", day.title);
+            if (nextTitle && nextTitle.trim()) {
+                day.title = nextTitle.trim();
+                renderAll();
+            }
+        }
+
+        function quickLogActivity(title, burn) {
+            state.today.logs.push({
+                id: 'log_' + Date.now(),
+                type: 'activity',
+                title: title,
+                cal: Number(burn)
+            });
+            addXP(15);
+            showToast(`${title}: -${burn} ккал (+15 XP)`, 'cyan');
+            renderAll();
+        }
+
+        function handleCustomActivitySubmit(e) {
+            e.preventDefault();
+            const title = document.getElementById('customActName').value.trim();
+            const burn = Number(document.getElementById('customActBurn').value) || 100;
+            quickLogActivity(title, burn);
+            e.target.reset();
+        }
+
+        // =====================================================
+        // WATER TRACKER
+        // =====================================================
+        function addWater(ml) {
+            state.today.water = Math.max(0, state.today.water + ml);
+            if (ml > 0) {
+                addXP(5);
+                showToast(`+${ml} мл воды (+5 XP)`, 'cyan');
+            }
+            renderAll();
+        }
+
+        // =====================================================
+        // CALCULATOR & GOALS SETTINGS
+        // =====================================================
+        function populateSettingsInputs() {
+            document.getElementById('manualCal').value = state.targets.cal;
+            document.getElementById('manualWater').value = state.targets.water;
+            document.getElementById('manualP').value = state.targets.p;
+            document.getElementById('manualF').value = state.targets.f;
+            document.getElementById('manualC').value = state.targets.c;
+        }
+
+        function calculateOptimalKBJU(e) {
+            e.preventDefault();
+            const weight = Number(document.getElementById('calcWeight').value) || 75;
+            const height = Number(document.getElementById('calcHeight').value) || 178;
+            const age = Number(document.getElementById('calcAge').value) || 25;
+            const activity = Number(document.getElementById('calcActivity').value) || 1.55;
+            const goal = document.getElementById('calcGoal').value;
+
+            // Mifflin-St Jeor formula
+            const bmr = (10 * weight) + (6.25 * height) - (5 * age) + 5;
+            let tdee = bmr * activity;
+
+            let pPerKg = 2.0, fPerKg = 1.0, goalLabel = "Рекомпозиция";
+            if (goal === 'cut') {
+                tdee *= 0.82;
+                pPerKg = 2.2;
+                fPerKg = 0.9;
+                goalLabel = "Сушка";
+            } else if (goal === 'bulk') {
+                tdee *= 1.15;
+                pPerKg = 2.0;
+                fPerKg = 1.05;
+                goalLabel = "Масса";
+            }
+
+            const targetCal = Math.round(tdee);
+            const targetP = Math.round(weight * pPerKg);
+            const targetF = Math.round(weight * fPerKg);
+            const targetC = Math.max(50, Math.round((targetCal - (targetP * 4) - (targetF * 9)) / 4));
+            const targetWater = Math.round(weight * 33);
+
+            state.targets = { cal: targetCal, p: targetP, f: targetF, c: targetC, water: targetWater };
+            state.goalName = goalLabel;
+
+            populateSettingsInputs();
+            renderAll();
+            showToast(`Новый план: ${targetCal} ккал (${goalLabel})`, 'lime');
+            switchTab('dashboard');
+        }
+
+        function saveManualTargets(e) {
+            e.preventDefault();
+            state.targets.cal = Number(document.getElementById('manualCal').value) || 2000;
+            state.targets.water = Number(document.getElementById('manualWater').value) || 2500;
+            state.targets.p = Number(document.getElementById('manualP').value) || 150;
+            state.targets.f = Number(document.getElementById('manualF').value) || 70;
+            state.targets.c = Number(document.getElementById('manualC').value) || 200;
+            renderAll();
+            showToast("Цели КБЖУ успешно обновлены!", "lime");
+        }
+
+        // =====================================================
+        // MODALS & NAVIGATION
+        // =====================================================
+        function switchTab(tabId) {
+            ['dashboard', 'nutrition', 'workouts', 'settings'].forEach(id => {
+                document.getElementById(`tab-${id}`).classList.toggle('hidden', id !== tabId);
+
+                // Desktop buttons
+                const dBtn = document.getElementById(`deskTab-${id}`);
+                if (dBtn) {
+                    dBtn.className = id === tabId
+                        ? "px-5 py-2.5 rounded-xl text-sm font-semibold transition flex items-center gap-2 bg-neonLime text-black shadow-lg shadow-neonLime/20"
+                        : "px-5 py-2.5 rounded-xl text-sm font-semibold transition flex items-center gap-2 text-gray-400 hover:text-white";
+                }
+
+                // Mobile buttons
+                const mBtn = document.getElementById(`mobTab-${id}`);
+                if (mBtn) {
+                    mBtn.className = id === tabId
+                        ? "flex flex-col items-center justify-center py-1.5 rounded-xl text-neonLime"
+                        : "flex flex-col items-center justify-center py-1.5 rounded-xl text-gray-400";
+                }
+            });
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function openAddPlannedMealModal() {
+            document.getElementById('modalPlannedMeal').classList.remove('hidden');
+            document.getElementById('modalPlannedMeal').classList.add('flex');
+        }
+
+        function openAddExerciseModal() {
+            document.getElementById('modalAddExercise').classList.remove('hidden');
+            document.getElementById('modalAddExercise').classList.add('flex');
+        }
+
+        function openResetDayModal() {
+            document.getElementById('modalResetDay').classList.remove('hidden');
+            document.getElementById('modalResetDay').classList.add('flex');
+        }
+
+        function closeModals() {
+            ['modalPlannedMeal', 'modalAddExercise', 'modalResetDay', 'modalQrGenerator'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.classList.add('hidden');
+                    el.classList.remove('flex');
+                }
+            });
+        }
+
+        function saveNewPlannedMeal(e) {
+            e.preventDefault();
+            const slot = document.getElementById('planMealSlot').value;
+            const title = document.getElementById('planMealTitle').value.trim();
+            const cal = Number(document.getElementById('planMealCal').value) || 0;
+            const p = Number(document.getElementById('planMealP').value) || 0;
+            const f = Number(document.getElementById('planMealF').value) || 0;
+            const c = Number(document.getElementById('planMealC').value) || 0;
+
+            state.mealPlan.push({
+                id: 'mp_' + Date.now(),
+                slot, title, cal, p, f, c, done: false
+            });
+            e.target.reset();
+            closeModals();
+            renderAll();
+            showToast("Прием пищи добавлен в план!", "lime");
+        }
+
+        function deletePlannedMeal(mealId) {
+            state.mealPlan = state.mealPlan.filter(m => m.id !== mealId);
+            renderAll();
+        }
+
+        function saveNewExercise(e) {
+            e.preventDefault();
+            const name = document.getElementById('exTitleInput').value.trim();
+            const sets = document.getElementById('exSetsInput').value.trim();
+            const weight = Number(document.getElementById('exWeightInput').value) || 0;
+            const burn = Number(document.getElementById('exBurnInput').value) || 80;
+
+            state.workoutPlan[state.selectedDayIdx].exercises.push({
+                id: 'ex_' + Date.now(),
+                name, sets, weight, burn, done: false
+            });
+            e.target.reset();
+            closeModals();
+            renderAll();
+            showToast("Упражнение добавлено в сплит!", "cyan");
+        }
+
+        function confirmNewDay() {
+            state.today.water = 0;
+            state.today.logs = [];
+            state.mealPlan.forEach(m => m.done = false);
+            state.workoutPlan.forEach(d => d.exercises.forEach(ex => ex.done = false));
+            state.streak += 1;
+            addXP(25);
+            closeModals();
+            renderAll();
+            showToast(`Новый день начат! Стрик: ${state.streak} дн. (+25 XP)`, "lime");
+        }
+
+        function factoryResetApp() {
+            localStorage.removeItem("vibefit_state_v1");
+            state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+            populateSettingsInputs();
+            renderAll();
+            showToast("Все данные сброшены к исходному плану", "cyan");
+            switchTab('dashboard');
+        }
+
+        let toastTimer = null;
+        function showToast(message, color = 'lime') {
+            const box = document.getElementById('toastBox');
+            const icon = document.getElementById('toastIcon');
+            document.getElementById('toastText').textContent = message;
+
+            icon.className = color === 'lime'
+                ? 'ph-fill ph-check-circle text-neonLime text-xl'
+                : 'ph-fill ph-lightning text-neonCyan text-xl';
+
+            box.classList.remove('opacity-0', 'translate-y-[-10px]');
+            box.classList.add('opacity-100', 'translate-y-0');
+
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => {
+                box.classList.remove('opacity-100', 'translate-y-0');
+                box.classList.add('opacity-0', 'translate-y-[-10px]');
+            }, 2400);
+        }
+
+        window.onload = initApp;
+    </script>
+</body>
+</html>
